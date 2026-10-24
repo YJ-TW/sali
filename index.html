@@ -426,6 +426,8 @@ const lcache=new Map();
 function lunar(d){
   const k=ds(d);if(lcache.has(k))return lcache.get(k);
   let r=null;
+  /* 校正：瀏覽器內建曆法在 2027 年正月初一差一天（朔日接近午夜），依香港天文台資料更正為 2/6 起 */
+  if(k>='2027-02-06'&&k<='2027-03-07'){r={m:1,d:Math.round((parseD(k)-parseD('2027-02-06'))/864e5)+1,leap:false};lcache.set(k,r);return r}
   if(lf){try{const p=lf.formatToParts(d),m=p.find(x=>x.type==='month').value,dd=p.find(x=>x.type==='day').value;r={m:parseInt(m),d:parseInt(dd),leap:/bis/i.test(m)}}catch(e){}}
   lcache.set(k,r);return r;
 }
@@ -437,9 +439,10 @@ const FEST=[
  [1,1,'彌勒菩薩聖誕'],[2,8,'釋迦牟尼佛出家日'],[2,15,'釋迦牟尼佛涅槃日'],[2,19,'觀世音菩薩聖誕'],[2,21,'普賢菩薩聖誕'],
  [3,16,'準提菩薩聖誕'],[4,4,'文殊菩薩聖誕'],[4,8,'釋迦牟尼佛聖誕（浴佛節）'],[6,19,'觀世音菩薩成道日'],
  [7,13,'大勢至菩薩聖誕'],[7,15,'盂蘭盆節（佛歡喜日）'],[7,30,'地藏王菩薩聖誕'],[8,22,'燃燈古佛聖誕'],
- [9,19,'觀世音菩薩出家日'],[9,30,'藥師琉璃光如來聖誕'],[11,17,'阿彌陀佛聖誕'],[12,8,'釋迦牟尼佛成道日（臘八）']
+ [9,19,'觀世音菩薩出家日'],[9,30,'藥師琉璃光如來聖誕'],[11,17,'阿彌陀佛聖誕'],[12,8,'釋迦牟尼佛成道日（臘八）'],
+ [0,0,'清明報恩法會','qm'],[12,30,'除夕辭歲禮佛']
 ];
-const EVT_TYPES=['佛菩薩聖誕','佛菩薩紀念日','法會','齋日','共修','個人紀念','其他'];
+const EVT_TYPES=['佛菩薩聖誕','佛菩薩紀念日','法會','禮佛','齋日','共修','個人紀念','其他'];
 const FESTINFO={
  '彌勒菩薩聖誕':{o:'相傳農曆正月初一為彌勒菩薩聖誕。彌勒菩薩是未來佛，象徵慈心與歡喜。',b:'彌勒菩薩聖誕，祈願增長慈心與歡喜。',p:'可念「南無彌勒尊佛」，供花供果，發願以慈心待人。'},
  '釋迦牟尼佛出家日':{o:'紀念悉達多太子離開王宮出家求道。（各傳承日期略有不同）',b:'紀念佛陀出家，策勵自己的出離心。',p:'念「南無本師釋迦牟尼佛」，誦經，反省自己的執著。'},
@@ -457,6 +460,8 @@ const FESTINFO={
  '觀世音菩薩出家日':{o:'農曆九月十九相傳為觀世音菩薩出家日。',b:'觀世音菩薩出家日。',p:'可念「南無觀世音菩薩」、誦《普門品》、大悲咒。'},
  '藥師琉璃光如來聖誕':{o:'農曆九月三十相傳為藥師琉璃光如來聖誕。藥師佛發十二大願，消災延壽。',b:'藥師佛聖誕，祈願消災延壽、病苦消除。',p:'可誦《藥師經》，持藥師咒，念「南無藥師琉璃光如來」。'},
  '阿彌陀佛聖誕':{o:'農曆十一月十七相傳為阿彌陀佛聖誕。阿彌陀佛為西方極樂世界的教主。',b:'阿彌陀佛聖誕，發願往生淨土。',p:'可念「南無阿彌陀佛」，誦《阿彌陀經》、往生咒。'},
+ '清明報恩法會':{t:'法會',o:'清明是二十四節氣之一（國曆約 4/4 或 4/5），民間在這時掃墓追思祖先。佛教常於清明前後舉辦報恩法會，感念父母、祖先與一切眾生的恩德，並迴向亡者。各道場舉辦日期多在清明前後，可自行調整。',b:'追思祖先、報答親恩，迴向亡者離苦得樂。',p:'可誦《地藏經》或《阿彌陀經》，持往生咒、報父母恩咒，念佛，並將功德迴向給歷代祖先與親人。'},
+ '除夕辭歲禮佛':{t:'禮佛',o:'除夕是農曆年的最後一天（臘月三十，小月為二十九）。許多人在這一天向佛菩薩禮佛辭歲，感恩一年的庇佑，懺悔過失，並發願新的一年精進。',b:'辭舊歲，禮佛感恩、懺悔，發願新年精進。',p:'可在佛前或面向窗外禮佛三拜，誦《心經》或念佛，作年終的懺悔與迴向，祈願新年平安、家人安樂。'},
  '釋迦牟尼佛成道日（臘八）':{o:'農曆十二月初八，紀念釋迦牟尼佛在菩提樹下夜睹明星而成道，俗稱臘八。',b:'佛成道日，感念佛陀證悟的恩德。',p:'可念佛、誦經、供養，也有喝臘八粥結緣的習俗。'}
 };
 const festType=t=>/聖誕/.test(t)?'佛菩薩聖誕':/盂蘭盆/.test(t)?'法會':'佛菩薩紀念日';
@@ -464,10 +469,12 @@ function festList(){
   return FEST.map(f=>{
     const key=f[0]+'-'+f[1]+'-'+f[2],ov=S.festOv[key]||{},b=FESTINFO[f[2]]||{};
     const pick=(k,d)=>ov[k]!==undefined?ov[k]:d;
-    return{key,hidden:!!ov.hidden,edited:Object.keys(ov).some(k=>k!=='hidden'),lm:pick('lm',f[0]),ld:pick('ld',f[1]),span:pick('span',1),
-      title:pick('title',f[2]),type:pick('type',festType(f[2])),origin:pick('origin',b.o||''),brief:pick('brief',b.b||''),practice:pick('practice',b.p||'')};
+    return{rule:f[3]||'',key,hidden:!!ov.hidden,edited:Object.keys(ov).some(k=>k!=='hidden'),lm:pick('lm',f[0]),ld:pick('ld',f[1]),span:pick('span',1),
+      title:pick('title',f[2]),type:pick('type',b.t||festType(f[2])),origin:pick('origin',b.o||''),brief:pick('brief',b.b||''),practice:pick('practice',b.p||'')};
   });
 }
+const qingmingDay=y=>Math.floor((y%100)*0.2422+4.81)-Math.floor((y%100)/4);
+const isQingming=d=>d.getMonth()===3&&d.getDate()===qingmingDay(d.getFullYear());
 function lunarMatch(d0,lm,ld){
   const l=lunar(d0);if(!l||l.leap||l.m!==lm)return false;
   if(l.d===ld)return true;
@@ -481,7 +488,8 @@ function eventsOn(d){
   festList().forEach(f=>{
     if(f.hidden)return;
     for(let off=0;off<Math.max(1,f.span);off++){
-      if(lunarMatch(dayShift(d,-off),f.lm,f.ld)){out.push({t:'fest',key:f.key,title:f.title,type:f.type,origin:f.origin,brief:f.brief,practice:f.practice,day:off+1,span:Math.max(1,f.span)});break}
+      const d0=dayShift(d,-off);
+      if(f.rule==='qm'?isQingming(d0):lunarMatch(d0,f.lm,f.ld)){out.push({t:'fest',key:f.key,title:f.title,type:f.type,origin:f.origin,brief:f.brief,practice:f.practice,day:off+1,span:Math.max(1,f.span)});break}
     }
   });
   if(l&&S.settings.showMonthly&&(l.d===1||l.d===15))out.push({t:'monthly',title:l.d===1?'朔日（初一）':'望日（十五）',day:1,span:1});
@@ -909,10 +917,10 @@ function festForm(key){
   modal(`<h3>編輯節日</h3>
    <label class="f">名稱<input type="text" name="title" value="${h(f.title)}"></label>
    <label class="f">類型${typeInput(f.type)}</label>
-   <div class="two">
+   ${f.rule==='qm'?`<div class="hint" style="margin:8px 0">日期依節氣「清明」自動計算（國曆 4/4 或 4/5，每年不同），不需手動調整。若您的道場日期不同，可用「連續天數」延長，或另外新增一筆行程。</div>`:`<div class="two">
     <label class="f">農曆月<select name="lm">${LM.map((n,i)=>`<option value="${i+1}" ${f.lm===i+1?'selected':''}>${n}月</option>`).join('')}</select></label>
     <label class="f">農曆日（起）<select name="ld">${Array.from({length:30},(_,i)=>`<option value="${i+1}" ${f.ld===i+1?'selected':''}>${lday(i+1)}</option>`).join('')}</select></label>
-   </div>
+   </div>`}
    <label class="f">連續天數（單日填 1）<input type="number" name="span" min="1" max="30" value="${f.span}"></label>
    <label class="f">當日簡述（一句話）<input type="text" name="brief" value="${h(f.brief)}"></label>
    <label class="f">節日來由<textarea name="origin" rows="3">${h(f.origin)}</textarea></label>
@@ -1110,7 +1118,9 @@ const A={
   festForm:d=>festForm(d.k),
   festSave:d=>{
     const title=val('title');if(!title){toast('請填寫名稱');return}
-    const ov=Object.assign({},S.festOv[d.k]||{},{title,type:val('type'),lm:+val('lm'),ld:+val('ld'),span:Math.min(30,Math.max(1,parseInt(val('span'))||1)),brief:val('brief'),origin:val('origin'),practice:val('practice')});
+    const fi=festList().find(x=>x.key===d.k)||{};
+    const dt=fi.rule==='qm'?{}:{lm:+val('lm'),ld:+val('ld')};
+    const ov=Object.assign({},S.festOv[d.k]||{},dt,{title,type:val('type'),span:Math.min(30,Math.max(1,parseInt(val('span'))||1)),brief:val('brief'),origin:val('origin'),practice:val('practice')});
     S.festOv[d.k]=ov;save();closeModal();render();toast('已儲存');
   },
   festReset:d=>{if(confirm('還原成內建的名稱、日期與說明？')){const hid=(S.festOv[d.k]||{}).hidden;if(hid)S.festOv[d.k]={hidden:true};else delete S.festOv[d.k];save();closeModal();render()}},
