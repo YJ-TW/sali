@@ -95,7 +95,7 @@ label.f>input,label.f>select,label.f>textarea{margin-top:3px;color:var(--ink)}
 [data-theme=zhuangyan] .banner{background:#2a3157;color:#EFE8D6}
 .ev{display:flex;gap:10px;padding:7px 0;border-top:1px dashed var(--line);align-items:baseline}
 .ev:first-child{border-top:0}
-.ev time{flex:0 0 5.6em;color:var(--acc);font-weight:700;font-size:.9rem}
+.ev time{flex:0 0 6.6em;color:var(--acc);font-weight:700;font-size:.9rem}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .seg button{border:0;background:var(--card);padding:7px 18px;cursor:pointer}
 .seg button.on{background:var(--acc);color:var(--on-acc);font-weight:700}
@@ -264,7 +264,7 @@ function seedMore(){
 const LIB_V=14;
 
 function defaults(){return{
- v:1,libV:LIB_V,modified:0,delLogs:[],
+ v:1,libV:LIB_V,modified:0,delLogs:[],festOv:{},
  settings:{zyPos:'right',name:'',title:'弟子',theme:'chanyi',gap:30,showMonthly:true,lastExport:0,zy:true,fs:1},
  sutras:seedSutras().concat(seedMore()),
  plan:[{id:uid(),sutraId:'s_xinjing',times:1}],
@@ -293,7 +293,7 @@ function load(){
       const dz=m.sutras.find(t=>t.id==='s_dizangjing'),sd=sm.find(t=>t.id==='s_dizangjing');
       if(dz&&sd&&!dz.parts){dz.parts=sd.parts;dz.text=''}
       m.libV=LIB_V}
-    m.delLogs=m.delLogs||[];m.modified=m.modified||0;
+    m.delLogs=m.delLogs||[];m.modified=m.modified||0;m.festOv=m.festOv||{};
     return m}}catch(e){}
   return defaults();
 }
@@ -334,7 +334,7 @@ const Sync={
     const seeds=seedIndex(),st={};SYNC_SET.forEach(k=>st[k]=S.settings[k]);
     return{v:1,modified:S.modified,settings:st,plan:S.plan,targets:S.targets,
       logs:[...S.logs].sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1)),delLogs:[...new Set(S.delLogs)].sort(),
-      checkins:[...S.checkins].sort(),events:S.events,barriers:S.barriers,dedications:S.dedications,finals:S.finals,ending:S.ending,
+      checkins:[...S.checkins].sort(),events:S.events,festOv:S.festOv,barriers:S.barriers,dedications:S.dedications,finals:S.finals,ending:S.ending,
       lastActivity:S.lastActivity,
       sutraCustom:S.sutras.filter(x=>!seeds[x.id]||JSON.stringify(x)!==seeds[x.id]).sort((a,b)=>a.id<b.id?-1:1),
       delSeeds:Object.keys(seeds).filter(id=>!S.sutras.some(x=>x.id===id)).sort()};
@@ -351,6 +351,7 @@ const Sync={
       SYNC_SET.forEach(k=>{if(Rm.settings&&k in Rm.settings)S.settings[k]=Rm.settings[k]});
       ['plan','targets','events','barriers','dedications','finals'].forEach(k=>{if(Array.isArray(Rm[k]))S[k]=Rm[k]});
       if(typeof Rm.ending==='string')S.ending=Rm.ending;
+      if(Rm.festOv&&typeof Rm.festOv==='object')S.festOv=Rm.festOv;
       S.lastActivity=Math.max(S.lastActivity||0,Rm.lastActivity||0);
       const gone=new Set(Rm.delSeeds||[]),cus=new Map((Rm.sutraCustom||[]).map(x=>[x.id,x]));
       const base=seedSutras().concat(seedMore()).filter(x=>!gone.has(x.id)).map(x=>cus.get(x.id)||x);
@@ -438,27 +439,76 @@ const FEST=[
  [7,13,'大勢至菩薩聖誕'],[7,15,'盂蘭盆節（佛歡喜日）'],[7,30,'地藏王菩薩聖誕'],[8,22,'燃燈古佛聖誕'],
  [9,19,'觀世音菩薩出家日'],[9,30,'藥師琉璃光如來聖誕'],[11,17,'阿彌陀佛聖誕'],[12,8,'釋迦牟尼佛成道日（臘八）']
 ];
+const EVT_TYPES=['佛菩薩聖誕','佛菩薩紀念日','法會','齋日','共修','個人紀念','其他'];
+const FESTINFO={
+ '彌勒菩薩聖誕':{o:'相傳農曆正月初一為彌勒菩薩聖誕。彌勒菩薩是未來佛，象徵慈心與歡喜。',b:'彌勒菩薩聖誕，祈願增長慈心與歡喜。',p:'可念「南無彌勒尊佛」，供花供果，發願以慈心待人。'},
+ '釋迦牟尼佛出家日':{o:'紀念悉達多太子離開王宮出家求道。（各傳承日期略有不同）',b:'紀念佛陀出家，策勵自己的出離心。',p:'念「南無本師釋迦牟尼佛」，誦經，反省自己的執著。'},
+ '釋迦牟尼佛涅槃日':{o:'紀念釋迦牟尼佛於拘尸那城示現涅槃。（各傳承日期略有不同）',b:'紀念佛陀涅槃，珍惜佛法、精進修行。',p:'念佛、誦經，感念佛恩，也可以讀誦《佛遺教經》。'},
+ '觀世音菩薩聖誕':{o:'農曆二月十九相傳為觀世音菩薩聖誕。',b:'觀世音菩薩聖誕，尋聲救苦的慈悲日。',p:'可念「南無觀世音菩薩」、誦《普門品》、大悲咒、心經，並行善放生。'},
+ '普賢菩薩聖誕':{o:'農曆二月二十一相傳為普賢菩薩聖誕。普賢菩薩以十大行願著稱。',b:'普賢菩薩聖誕，學習廣大的行願。',p:'可誦《普賢行願品》，念「南無普賢菩薩」。'},
+ '準提菩薩聖誕':{o:'農曆三月十六相傳為準提菩薩聖誕。',b:'準提菩薩聖誕，祈求消災增福。',p:'可持準提神咒，念「南無準提王菩薩」。'},
+ '文殊菩薩聖誕':{o:'農曆四月初四相傳為文殊菩薩聖誕。文殊菩薩代表大智慧。',b:'文殊菩薩聖誕，祈願開啟智慧。',p:'可持文殊智慧咒，念「南無文殊師利菩薩」。'},
+ '釋迦牟尼佛聖誕（浴佛節）':{o:'紀念釋迦牟尼佛誕生。傳統以香湯沐浴太子像，稱為浴佛，也是台灣的佛誕節（農曆四月初八）。',b:'佛誕日，浴佛、感念佛恩。',p:'可浴佛、供花、念佛、誦經，並發願行善；也可以齋戒一日。'},
+ '觀世音菩薩成道日':{o:'農曆六月十九相傳為觀世音菩薩成道日。',b:'觀世音菩薩成道日，學習菩薩的慈悲與智慧。',p:'可念「南無觀世音菩薩」、誦《普門品》或大悲咒。'},
+ '大勢至菩薩聖誕':{o:'農曆七月十三相傳為大勢至菩薩聖誕。大勢至菩薩為西方三聖之一。',b:'大勢至菩薩聖誕，攝念佛人。',p:'可念「南無大勢至菩薩」與「南無阿彌陀佛」。'},
+ '盂蘭盆節（佛歡喜日）':{o:'源自《佛說盂蘭盆經》，目連尊者救度母親的故事。七月十五日僧眾自恣圓滿，因此稱佛歡喜日。常於此時供養三寶、超薦祖先。',b:'供養僧眾、超度祖先與眾生的日子。',p:'可誦《地藏經》、報父母恩咒、念佛，並將功德迴向給七世父母與歷代祖先。'},
+ '地藏王菩薩聖誕':{o:'農曆七月三十相傳為地藏王菩薩聖誕。地藏菩薩發願度盡地獄眾生。',b:'地藏王菩薩聖誕，孝親報恩、超薦亡者。',p:'可誦《地藏經》，念「南無地藏王菩薩」，並迴向給亡者與眾生。'},
+ '燃燈古佛聖誕':{o:'農曆八月二十二相傳為燃燈古佛聖誕。燃燈佛曾為釋迦牟尼佛授記。（各道場說法略有不同）',b:'燃燈古佛聖誕。',p:'可念佛、誦經、供燈。'},
+ '觀世音菩薩出家日':{o:'農曆九月十九相傳為觀世音菩薩出家日。',b:'觀世音菩薩出家日。',p:'可念「南無觀世音菩薩」、誦《普門品》、大悲咒。'},
+ '藥師琉璃光如來聖誕':{o:'農曆九月三十相傳為藥師琉璃光如來聖誕。藥師佛發十二大願，消災延壽。',b:'藥師佛聖誕，祈願消災延壽、病苦消除。',p:'可誦《藥師經》，持藥師咒，念「南無藥師琉璃光如來」。'},
+ '阿彌陀佛聖誕':{o:'農曆十一月十七相傳為阿彌陀佛聖誕。阿彌陀佛為西方極樂世界的教主。',b:'阿彌陀佛聖誕，發願往生淨土。',p:'可念「南無阿彌陀佛」，誦《阿彌陀經》、往生咒。'},
+ '釋迦牟尼佛成道日（臘八）':{o:'農曆十二月初八，紀念釋迦牟尼佛在菩提樹下夜睹明星而成道，俗稱臘八。',b:'佛成道日，感念佛陀證悟的恩德。',p:'可念佛、誦經、供養，也有喝臘八粥結緣的習俗。'}
+};
+const festType=t=>/聖誕/.test(t)?'佛菩薩聖誕':/盂蘭盆/.test(t)?'法會':'佛菩薩紀念日';
+function festList(){
+  return FEST.map(f=>{
+    const key=f[0]+'-'+f[1]+'-'+f[2],ov=S.festOv[key]||{},b=FESTINFO[f[2]]||{};
+    const pick=(k,d)=>ov[k]!==undefined?ov[k]:d;
+    return{key,hidden:!!ov.hidden,edited:Object.keys(ov).some(k=>k!=='hidden'),lm:pick('lm',f[0]),ld:pick('ld',f[1]),span:pick('span',1),
+      title:pick('title',f[2]),type:pick('type',festType(f[2])),origin:pick('origin',b.o||''),brief:pick('brief',b.b||''),practice:pick('practice',b.p||'')};
+  });
+}
+function lunarMatch(d0,lm,ld){
+  const l=lunar(d0);if(!l||l.leap||l.m!==lm)return false;
+  if(l.d===ld)return true;
+  if(ld===30&&l.d===29){const ln=lunar(new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+1,12));return !!ln&&ln.d===1}
+  return false;
+}
+const dayShift=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n,12);
+const evSpan=e=>{if(!e.endDate||e.endDate<=e.date)return 1;return Math.min(60,Math.round((parseD(e.endDate)-parseD(e.date))/864e5)+1)};
 function eventsOn(d){
   const out=[],l=lunar(d),M=d.getMonth()+1,D=d.getDate(),k=ds(d);
-  if(l&&!l.leap){
-    let monthEnd29=false;
-    if(l.d===29){const n=new Date(d.getFullYear(),d.getMonth(),D+1,12),ln=lunar(n);monthEnd29=ln&&ln.d===1}
-    FEST.forEach(f=>{if(f[0]===l.m&&(f[1]===l.d||(f[1]===30&&monthEnd29)))out.push({t:'fest',title:f[2]})});
-  }
-  if(l&&S.settings.showMonthly&&(l.d===1||l.d===15))out.push({t:'monthly',title:l.d===1?'朔日（初一）':'望日（十五）'});
+  festList().forEach(f=>{
+    if(f.hidden)return;
+    for(let off=0;off<Math.max(1,f.span);off++){
+      if(lunarMatch(dayShift(d,-off),f.lm,f.ld)){out.push({t:'fest',key:f.key,title:f.title,type:f.type,origin:f.origin,brief:f.brief,practice:f.practice,day:off+1,span:Math.max(1,f.span)});break}
+    }
+  });
+  if(l&&S.settings.showMonthly&&(l.d===1||l.d===15))out.push({t:'monthly',title:l.d===1?'朔日（初一）':'望日（十五）',day:1,span:1});
   S.events.forEach(e=>{
-    let hit=false;
-    if(e.repeat==='none')hit=e.date===k;
-    else if(e.repeat==='solar'){const x=parseD(e.date);hit=x.getMonth()+1===M&&x.getDate()===D}
-    else if(e.repeat==='lunar')hit=!!l&&!l.leap&&l.m===e.lm&&l.d===e.ld;
-    if(hit)out.push({t:'custom',title:e.title,note:e.note,id:e.id});
+    const span=evSpan(e);let day=0;
+    if(e.repeat==='none'||!e.repeat){const a=parseD(e.date),df=Math.round((parseD(k)-a)/864e5);if(df>=0&&df<span)day=df+1}
+    else for(let off=0;off<span&&!day;off++){
+      const d0=dayShift(d,-off);
+      if(e.repeat==='solar'){const x=parseD(e.date);if(x.getMonth()===d0.getMonth()&&x.getDate()===d0.getDate())day=off+1}
+      else if(e.repeat==='lunar'&&lunarMatch(d0,e.lm,e.ld))day=off+1;
+    }
+    if(day)out.push({t:'custom',id:e.id,title:e.title,type:e.type||'',origin:e.origin||'',brief:e.brief||'',practice:e.practice||'',note:e.note,day,span});
   });
   S.targets.forEach(t=>{
-    const mk=(s,label)=>{if(!s)return;const x=parseD(s);if(x.getMonth()+1===M&&x.getDate()===D){const n=d.getFullYear()-x.getFullYear();out.push({t:'target',title:`${t.name} ${label}${n>0?`（${n} 週年）`:''}`})}};
+    const mk=(s,label)=>{if(!s)return;const x=parseD(s);if(x.getMonth()+1===M&&x.getDate()===D){const n=d.getFullYear()-x.getFullYear();out.push({t:'target',title:`${t.name} ${label}${n>0?`（${n} 週年）`:''}`,day:1,span:1})}};
     mk(t.birthday,t.cat==='pet'?'生日／領養日':'生日');
     if(t.status==='passed')mk(t.passed,'往生紀念日');
   });
   return out;
+}
+function evSpanText(s,e){
+  if(!(e.span>1))return `${s.getMonth()+1}/${s.getDate()}（${WK[s.getDay()]}）`;
+  const x=dayShift(s,e.span-1);return `${s.getMonth()+1}/${s.getDate()}–${x.getMonth()+1}/${x.getDate()}`;
+}
+function evRow(d,e){
+  const s=dayShift(d,-(e.day-1)),k=e.key||e.id;
+  return `<div class="ev" ${k?`data-act="evView" data-k="${h(k)}" data-date="${ds(d)}" style="cursor:pointer"`:''}><time>${evSpanText(s,e)}</time><div class="grow">${h(e.title)}${e.type?` <span class="tag">${h(e.type)}</span>`:''}${e.span>1?`<span class="muted small">（第 ${e.day} 天／共 ${e.span} 天）</span>`:''}${e.brief?`<div class="small">${h(e.brief)}</div>`:''}<div class="muted small">${lunarText(s)}${k?'　點一下看詳情':''}</div></div></div>`;
 }
 
 /* ========== 資料查詢 ========== */
@@ -509,7 +559,7 @@ function pHome(){
   const tn=S.logs.filter(l=>l.date===t).reduce((a,l)=>a+l.n,0);
   const done=allPlanDone();
   const ups=[];const now=new Date();
-  for(let i=0;i<=30;i++){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12);eventsOn(d).filter(e=>e.t!=='monthly').forEach(e=>ups.push({d,e}))}
+  for(let i=0;i<=30;i++){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12);eventsOn(d).filter(e=>e.t!=='monthly'&&(e.day===1||i===0)).forEach(e=>ups.push({d,e}))}
   const needBackup=S.logs.length>0&&Date.now()-S.settings.lastExport>14*864e5;
   return `
   ${!S.settings.name?`<div class="banner">請先到「設定」填入您的名稱，結界文與迴向文會自動帶入。<button class="btn sm" data-act="nav" data-v="set">前往設定</button></div>`:''}
@@ -551,7 +601,7 @@ function pHome(){
   </div>
   <div class="card">
     <h2><span>一個月內的行事曆</span><button class="btn sm" data-act="nav" data-v="cal">年度行事曆</button></h2>
-    ${ups.length?ups.map(({d,e})=>`<div class="ev"><time>${d.getMonth()+1}/${d.getDate()}（${WK[d.getDay()]}）</time><div class="grow">${h(e.title)}<div class="muted small">${lunarText(d)}</div></div></div>`).join(''):`<div class="empty">未來 30 天沒有特別的法會或節日。</div>`}
+    ${ups.length?ups.map(({d,e})=>evRow(d,e)).join(''):`<div class="empty">未來 30 天沒有特別的法會或節日。</div>`}
   </div>`;
 }
 
@@ -649,7 +699,7 @@ function pCal(){
   const sd=parseD(CAL.sel),sev=eventsOn(sd);
   // 全年列表
   const yearList=[];
-  for(let mo=0;mo<12;mo++){const dim=new Date(y,mo+1,0).getDate();for(let dd=1;dd<=dim;dd++){const d=new Date(y,mo,dd,12);eventsOn(d).filter(e=>e.t!=='monthly').forEach(e=>yearList.push({d,e}))}}
+  for(let mo=0;mo<12;mo++){const dim=new Date(y,mo+1,0).getDate();for(let dd=1;dd<=dim;dd++){const d=new Date(y,mo,dd,12);eventsOn(d).filter(e=>e.t!=='monthly'&&e.day===1).forEach(e=>yearList.push({d,e}))}}
   return `
   <div class="card">
     <div class="row" style="justify-content:space-between;margin-bottom:10px">
@@ -662,12 +712,14 @@ function pCal(){
   </div>
   <div class="card">
     <h2><span>${sd.getMonth()+1}/${sd.getDate()}（週${WK[sd.getDay()]}）<span class="muted small" style="font-weight:400">${lunarText(sd)}</span></span><button class="btn sm" data-act="evForm" data-date="${CAL.sel}">＋ 新增行程</button></h2>
-    ${sev.length?sev.map(e=>`<div class="ev"><div class="grow">${h(e.title)}${e.note?`<div class="muted small">${h(e.note)}</div>`:''}</div>${e.id?`<button class="btn sm" data-act="evForm" data-id="${e.id}">編輯</button><button class="btn sm dng" data-act="evDel" data-id="${e.id}">刪除</button>`:''}</div>`).join(''):`<div class="muted small">這天沒有安排。</div>`}
+    ${sev.length?sev.map(e=>evRow(sd,e)).join(''):`<div class="muted small">這天沒有安排。</div>`}
   </div>
   <div class="card">
     <h2><span>${y} 年度法會與節日</span></h2>
-    ${yearList.map(({d,e})=>`<div class="ev"><time>${d.getMonth()+1}/${d.getDate()}（${WK[d.getDay()]}）</time><div class="grow">${h(e.title)}<div class="muted small">${lunarText(d)}</div></div>${e.id?`<button class="btn sm" data-act="evForm" data-id="${e.id}">編輯</button>`:''}</div>`).join('')||'<div class="muted small">沒有資料</div>'}
-  </div>`;
+    <div class="hint" style="margin:-4px 0 6px">點任一項可看來由與持修細節，並可編輯或隱藏。</div>
+    ${yearList.map(({d,e})=>evRow(d,e)).join('')||'<div class="muted small">沒有資料</div>'}
+  </div>
+  ${festList().some(f=>f.hidden)?`<div class="card"><h2>已隱藏的節日</h2>${festList().filter(f=>f.hidden).map(f=>`<div class="ev"><div class="grow">${h(f.title)}</div><button class="btn sm" data-act="festShow" data-k="${h(f.key)}">還原顯示</button></div>`).join('')}</div>`:''}`;
 }
 
 /* --- 設定 --- */
@@ -835,14 +887,58 @@ function tgDedicate(id){
 }
 
 /* --- 行程 --- */
+function typeInput(v){return `<input type="text" name="type" list="evtypes" value="${h(v||'')}" placeholder="選擇或自訂，例如：法會"><datalist id="evtypes">${EVT_TYPES.map(t=>`<option value="${t}">`).join('')}</datalist>`}
 function evForm(id,date){
-  const e=id?S.events.find(x=>x.id===id):{repeat:'none',date:date||today()};
-  modal(`<h3>${id?'編輯':'新增'}行程</h3>
+  const e=id?S.events.find(x=>x.id===id):{repeat:'none',date:date||today(),type:'法會'};
+  modal(`<h3>${id?'編輯':'新增'}行程／節日</h3>
    <label class="f">名稱<input type="text" name="title" value="${h(e.title||'')}" placeholder="例如：地藏法會"></label>
-   <label class="f">日期（國曆）<input type="date" name="date" value="${h(e.date)}"></label>
+   <label class="f">類型${typeInput(e.type)}</label>
+   <div class="two">
+    <label class="f">開始日期（國曆）<input type="date" name="date" value="${h(e.date)}"></label>
+    <label class="f">結束日期（連續多天才填）<input type="date" name="endDate" value="${h(e.endDate||'')}"></label>
+   </div>
    <label class="f">重複<select name="repeat"><option value="none" ${e.repeat==='none'?'selected':''}>不重複</option><option value="solar" ${e.repeat==='solar'?'selected':''}>每年（同國曆日期）</option><option value="lunar" ${e.repeat==='lunar'?'selected':''}>每年（同農曆日期）</option></select></label>
+   <label class="f">當日簡述（一句話）<input type="text" name="brief" value="${h(e.brief||'')}" placeholder="例如：超薦亡者、孝親報恩"></label>
+   <label class="f">節日來由<textarea name="origin" rows="3">${h(e.origin||'')}</textarea></label>
+   <label class="f">持修細節（念什麼、做什麼、遍數、迴向…）<textarea name="practice" rows="3">${h(e.practice||'')}</textarea></label>
    <label class="f">備註<textarea name="note" rows="2">${h(e.note||'')}</textarea></label>
    <div class="sticky-act"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-act="evSave" data-id="${id||''}">儲存</button></div>`);
+}
+function festForm(key){
+  const f=festList().find(x=>x.key===key);if(!f)return;
+  modal(`<h3>編輯節日</h3>
+   <label class="f">名稱<input type="text" name="title" value="${h(f.title)}"></label>
+   <label class="f">類型${typeInput(f.type)}</label>
+   <div class="two">
+    <label class="f">農曆月<select name="lm">${LM.map((n,i)=>`<option value="${i+1}" ${f.lm===i+1?'selected':''}>${n}月</option>`).join('')}</select></label>
+    <label class="f">農曆日（起）<select name="ld">${Array.from({length:30},(_,i)=>`<option value="${i+1}" ${f.ld===i+1?'selected':''}>${lday(i+1)}</option>`).join('')}</select></label>
+   </div>
+   <label class="f">連續天數（單日填 1）<input type="number" name="span" min="1" max="30" value="${f.span}"></label>
+   <label class="f">當日簡述（一句話）<input type="text" name="brief" value="${h(f.brief)}"></label>
+   <label class="f">節日來由<textarea name="origin" rows="3">${h(f.origin)}</textarea></label>
+   <label class="f">持修細節（念什麼、做什麼、遍數、迴向…）<textarea name="practice" rows="3">${h(f.practice)}</textarea></label>
+   <div class="hint">內建的說明是一般常見說法，各傳承與道場的日期、做法略有不同，可依您的道場自行修改。</div>
+   <div class="sticky-act">
+     ${f.edited?`<button class="btn sm" data-act="festReset" data-k="${h(key)}">還原預設</button>`:''}
+     <button class="btn dng sm" data-act="festHide" data-k="${h(key)}">隱藏</button>
+     <button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-act="festSave" data-k="${h(key)}">儲存</button>
+   </div>`);
+}
+function evView(k,date){
+  const d=parseD(date),e=eventsOn(d).find(x=>(x.key||x.id)===k);if(!e)return;
+  const s=dayShift(d,-(e.day-1)),sec=(t,v)=>v?`<h4 style="margin-top:12px">${t}</h4><div class="paper small">${lines(v)}</div>`:'';
+  const empty=!e.brief&&!e.origin&&!e.practice&&!e.note;
+  modal(`<h3>${h(e.title)}</h3>
+   <div>${e.type?`<span class="tag">${h(e.type)}</span>`:''}</div>
+   <div class="muted small" style="margin-top:4px">${s.getFullYear()}/${evSpanText(s,e).replace(/（.*）/,'')}${e.span>1?`（共 ${e.span} 天）`:''}・${lunarText(s)}</div>
+   ${e.brief?`<p style="margin:10px 0 0"><b>${h(e.brief)}</b></p>`:''}
+   ${sec('節日來由',e.origin)}${sec('持修細節',e.practice)}${sec('備註',e.note)}
+   ${empty?'<div class="muted small" style="margin-top:12px">還沒有填寫說明，按「編輯」補充。</div>':''}
+   <div class="sticky-act">
+     ${e.id?`<button class="btn dng sm" data-act="evDel" data-id="${e.id}">刪除</button><button class="btn pri sm" data-act="evForm" data-id="${e.id}">編輯</button>`
+          :`<button class="btn dng sm" data-act="festHide" data-k="${h(e.key)}">隱藏</button><button class="btn pri sm" data-act="festForm" data-k="${h(e.key)}">編輯</button>`}
+     <button class="btn sm" data-act="closeModal">關閉</button>
+   </div>`);
 }
 
 /* --- 範本 --- */
@@ -999,14 +1095,27 @@ const A={
   calMove:d=>{let m=CAL.m+ +d.v,y=CAL.y;if(m<0){m=11;y--}if(m>11){m=0;y++}CAL.m=m;CAL.y=y;render()},
   calSel:d=>{CAL.sel=d.v;render()},
   evForm:d=>evForm(d.id,d.date),
+  evView:d=>evView(d.k,d.date),
   evSave:d=>{
-    const title=val('title'),date=val('date');if(!title||!date){toast('請填寫名稱與日期');return}
-    const o={title,date,repeat:val('repeat'),note:val('note')};
+    const title=val('title'),date=val('date'),end=val('endDate');
+    if(!title||!date){toast('請填寫名稱與開始日期');return}
+    if(end&&end<date){toast('結束日期不能早於開始日期');return}
+    const o={title,type:val('type'),date,endDate:end&&end>date?end:'',repeat:val('repeat'),brief:val('brief'),origin:val('origin'),practice:val('practice'),note:val('note')};
+    if(evSpan(o)>=60&&end&&Math.round((parseD(end)-parseD(date))/864e5)+1>60)toast('連續天數最多 60 天，已自動截到 60 天');
     if(o.repeat==='lunar'){const l=lunar(parseD(date));if(l){o.lm=l.m;o.ld=l.d}else o.repeat='solar'}
     if(d.id)Object.assign(S.events.find(e=>e.id===d.id),o);else S.events.push({id:uid(),...o});
     save();closeModal();render();
   },
-  evDel:d=>{if(confirm('刪除這個行程？')){S.events=S.events.filter(e=>e.id!==d.id);save();render()}},
+  evDel:d=>{if(confirm('刪除這個行程？')){S.events=S.events.filter(e=>e.id!==d.id);save();closeModal();render()}},
+  festForm:d=>festForm(d.k),
+  festSave:d=>{
+    const title=val('title');if(!title){toast('請填寫名稱');return}
+    const ov=Object.assign({},S.festOv[d.k]||{},{title,type:val('type'),lm:+val('lm'),ld:+val('ld'),span:Math.min(30,Math.max(1,parseInt(val('span'))||1)),brief:val('brief'),origin:val('origin'),practice:val('practice')});
+    S.festOv[d.k]=ov;save();closeModal();render();toast('已儲存');
+  },
+  festReset:d=>{if(confirm('還原成內建的名稱、日期與說明？')){const hid=(S.festOv[d.k]||{}).hidden;if(hid)S.festOv[d.k]={hidden:true};else delete S.festOv[d.k];save();closeModal();render()}},
+  festHide:d=>{if(confirm('隱藏這個節日？之後可以在行事曆頁面最下方「已隱藏的節日」還原。')){S.festOv[d.k]=Object.assign({},S.festOv[d.k]||{},{hidden:true});save();closeModal();render()}},
+  festShow:d=>{const ov=Object.assign({},S.festOv[d.k]||{});delete ov.hidden;if(Object.keys(ov).length)S.festOv[d.k]=ov;else delete S.festOv[d.k];save();render()},
   /* 範本 */
   tplForm:d=>tplForm(d.kind,d.id),
   tplSave:d=>{
