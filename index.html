@@ -264,7 +264,7 @@ function seedMore(){
 const LIB_V=14;
 
 function defaults(){return{
- v:1,libV:LIB_V,
+ v:1,libV:LIB_V,modified:0,delLogs:[],
  settings:{zyPos:'right',name:'',title:'弟子',theme:'chanyi',gap:30,showMonthly:true,lastExport:0,zy:true,fs:1},
  sutras:seedSutras().concat(seedMore()),
  plan:[{id:uid(),sutraId:'s_xinjing',times:1}],
@@ -293,10 +293,131 @@ function load(){
       const dz=m.sutras.find(t=>t.id==='s_dizangjing'),sd=sm.find(t=>t.id==='s_dizangjing');
       if(dz&&sd&&!dz.parts){dz.parts=sd.parts;dz.text=''}
       m.libV=LIB_V}
+    m.delLogs=m.delLogs||[];m.modified=m.modified||0;
     return m}}catch(e){}
   return defaults();
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('儲存失敗：瀏覽器空間不足，請先匯出備份或移除照片')}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('儲存失敗：瀏覽器空間不足，請先匯出備份或移除照片')}}
+function save(){S.modified=Date.now();persist();if(typeof Sync!=='undefined')Sync.schedule()}
+
+
+/* ========== 資料同步（GitHub 私人 Gist，可選加密） ========== */
+const SK='sachi_sync_v1',SDESC='裟笠同步資料',SFILE='sachi-data.json',SYNC_SET=['name','title','gap','showMonthly'];
+const u8b64=u=>{let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+const b64u8=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
+async function cryptoKey(pass,salt){
+  const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encText(txt,pass){
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},await cryptoKey(pass,salt),new TextEncoder().encode(txt)));
+  return JSON.stringify({enc:1,salt:u8b64(salt),iv:u8b64(iv),data:u8b64(ct)});
+}
+async function decText(obj,pass){
+  if(!pass)throw new Error('NEEDPASS');
+  try{const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64u8(obj.iv)},await cryptoKey(pass,b64u8(obj.salt)),b64u8(obj.data));return new TextDecoder().decode(pt)}
+  catch(e){throw new Error('BADPASS')}
+}
+let _seedIdx=null;
+const seedIndex=()=>{if(!_seedIdx){_seedIdx={};seedSutras().concat(seedMore()).forEach(x=>{_seedIdx[x.id]=JSON.stringify(x)})}return _seedIdx};
+const Sync={
+  busy:false,timer:null,
+  cfg(){try{return JSON.parse(localStorage.getItem(SK))||{}}catch(e){return{}}},
+  setCfg(o){try{localStorage.setItem(SK,JSON.stringify(Object.assign(this.cfg(),o)))}catch(e){}},
+  on(){return !!this.cfg().token},
+  schedule(){
+    if(!this.on())return;clearTimeout(this.timer);
+    this.timer=setTimeout(()=>{if(R||this.busy)return this.schedule();this.run()},8000);
+  },
+  snapshot(){
+    const seeds=seedIndex(),st={};SYNC_SET.forEach(k=>st[k]=S.settings[k]);
+    return{v:1,modified:S.modified,settings:st,plan:S.plan,targets:S.targets,
+      logs:[...S.logs].sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1)),delLogs:[...new Set(S.delLogs)].sort(),
+      checkins:[...S.checkins].sort(),events:S.events,barriers:S.barriers,dedications:S.dedications,finals:S.finals,ending:S.ending,
+      lastActivity:S.lastActivity,
+      sutraCustom:S.sutras.filter(x=>!seeds[x.id]||JSON.stringify(x)!==seeds[x.id]).sort((a,b)=>a.id<b.id?-1:1),
+      delSeeds:Object.keys(seeds).filter(id=>!S.sutras.some(x=>x.id===id)).sort()};
+  },
+  sig(sn){return JSON.stringify(Object.assign({},sn,{modified:0}))},
+  /* 合併：念誦紀錄與打卡日取聯集；其餘以較新的一方為準。回傳 true 代表需要把合併結果推回雲端 */
+  merge(Rm,forceRemote){
+    const remoteNewer=forceRemote||(Rm.modified||0)>(S.modified||0);
+    const del=new Set([...(S.delLogs||[]),...(Rm.delLogs||[])]),map=new Map();
+    [...S.logs,...(Rm.logs||[])].forEach(l=>{if(!del.has(l.id))map.set(l.id,l)});
+    S.logs=[...map.values()].sort((a,b)=>a.ts-b.ts);S.delLogs=[...del];
+    S.checkins=[...new Set([...S.checkins,...(Rm.checkins||[])])].sort();
+    if(remoteNewer){
+      SYNC_SET.forEach(k=>{if(Rm.settings&&k in Rm.settings)S.settings[k]=Rm.settings[k]});
+      ['plan','targets','events','barriers','dedications','finals'].forEach(k=>{if(Array.isArray(Rm[k]))S[k]=Rm[k]});
+      if(typeof Rm.ending==='string')S.ending=Rm.ending;
+      S.lastActivity=Math.max(S.lastActivity||0,Rm.lastActivity||0);
+      const gone=new Set(Rm.delSeeds||[]),cus=new Map((Rm.sutraCustom||[]).map(x=>[x.id,x]));
+      const base=seedSutras().concat(seedMore()).filter(x=>!gone.has(x.id)).map(x=>cus.get(x.id)||x);
+      const ids=new Set(base.map(x=>x.id));(Rm.sutraCustom||[]).forEach(x=>{if(!ids.has(x.id)&&!gone.has(x.id))base.push(x)});
+      S.sutras=base;S.plan=S.plan.filter(p=>S.sutras.some(x=>x.id===p.sutraId));
+    }
+    const mine=this.snapshot();
+    const same=this.sig(mine)===this.sig(Rm);
+    if(same){S.modified=Math.max(S.modified||0,Rm.modified||0);return false}
+    S.modified=remoteNewer&&!forceRemote?Math.max(S.modified||0,Date.now()):Date.now();
+    return true;
+  },
+  async api(path,opt){
+    const c=this.cfg(),h={'Authorization':'Bearer '+c.token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+    if(opt&&opt.body)h['Content-Type']='application/json';
+    const r=await fetch('https://api.github.com'+path,Object.assign({},opt,{headers:h}));
+    if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}
+    return r.json();
+  },
+  async find(){
+    const l=await this.api('/gists?per_page=100');
+    const g=l.filter(x=>x.description===SDESC&&x.files&&x.files[SFILE]).sort((a,b)=>a.updated_at<b.updated_at?1:-1)[0];
+    return g?g.id:null;
+  },
+  async pull(id){
+    const g=await this.api('/gists/'+id),f=g.files&&g.files[SFILE];
+    if(!f)return null;
+    let txt=f.truncated?await (await fetch(f.raw_url)).text():f.content;
+    let o=JSON.parse(txt);
+    if(o.enc){o=JSON.parse(await decText(o,this.cfg().pass))}
+    return o;
+  },
+  async run(opt){
+    opt=opt||{};
+    if(this.busy||!this.on())return;
+    if(!navigator.onLine){this.setCfg({err:'目前沒有網路，連線後會再同步'});return}
+    this.busy=true;
+    try{
+      const c=this.cfg();let id=c.gistId,Rm=null;
+      if(!id){id=await this.find();if(id)this.setCfg({gistId:id})}
+      if(id){
+        try{Rm=await this.pull(id)}catch(e){if(e.status===404){this.setCfg({gistId:''});id=null}else throw e}
+      }
+      let push=true;
+      if(Rm){
+        let force=false;
+        if(opt.first&&!c.last){force=confirm('雲端已經有一份裟笠的資料。\n\n按「確定」＝以雲端資料為準（本機的今日功課、祈福對象、行事曆會被雲端取代，念誦紀錄會合併）\n按「取消」＝以這台裝置為準（會覆蓋雲端的功課、對象與行事曆）')}
+        push=this.merge(Rm,force);persist();
+      }
+      if(push){
+        let body=JSON.stringify(this.snapshot());
+        if(this.cfg().pass)body=await encText(body,this.cfg().pass);
+        const files={};files[SFILE]={content:body};
+        if(id)await this.api('/gists/'+id,{method:'PATCH',body:JSON.stringify({files})});
+        else{const g=await this.api('/gists',{method:'POST',body:JSON.stringify({description:SDESC,public:false,files})});this.setCfg({gistId:g.id})}
+      }
+      this.setCfg({last:Date.now(),err:''});persist();
+      if(!R)render();
+      if(opt.manual)toast('同步完成');
+    }catch(e){
+      const m=e.message==='NEEDPASS'?'雲端資料已加密，請輸入加密密碼':e.message==='BADPASS'?'加密密碼不正確':e.status===401?'Token 無效或已過期，請重新連線':e.status===403?'Token 權限不足或被限流，請確認有勾選 gist':e.status===404?'找不到 Gist':'同步失敗：'+(e.message||e);
+      this.setCfg({err:m});if(opt.manual)toast(m);if(!R&&page==='set')render();
+    }finally{this.busy=false}
+  }
+};
+window.addEventListener('online',()=>Sync.run());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!R)Sync.run()});
 
 /* ========== 農曆與行事曆 ========== */
 let lf=null;try{lf=new Intl.DateTimeFormat('en-u-ca-chinese',{month:'numeric',day:'numeric'})}catch(e){}
@@ -555,6 +676,26 @@ function tplList(kind,label){
   return `<div class="card"><h2><span>${label}</span><button class="btn sm" data-act="tplForm" data-kind="${kind}">＋ 新增</button></h2>
   ${S[kind].map(t=>`<div class="ev"><div class="grow"><b>${h(t.name)}</b><div class="muted small">${h(t.content.slice(0,40).replace(/\n/g,' '))}…</div></div><button class="btn sm" data-act="tplForm" data-kind="${kind}" data-id="${t.id}">編輯</button><button class="btn sm dng" data-act="tplDel" data-kind="${kind}" data-id="${t.id}">刪除</button></div>`).join('')||'<div class="muted small">尚無範本</div>'}</div>`;
 }
+
+function pSyncCard(){
+  const c=Sync.cfg(),on=!!c.token;
+  const when=c.last?new Date(c.last).toLocaleString():'尚未同步';
+  return `<div class="card"><h2>資料同步（GitHub 私人 Gist）</h2>
+  ${on?`<p class="small" style="margin-top:0">已連線　${c.pass?'🔒 已加密':'⚠ 未加密'}<br>上次同步：${h(when)}${c.err?`<br><span style="color:var(--warn)">${h(c.err)}</span>`:''}</p>
+    <div class="row"><button class="btn pri" data-act="syncNow">立即同步</button><button class="btn dng" data-act="syncOff">中斷連線</button></div>
+    <div class="hint" style="margin-top:8px">開啟 App、回到畫面、儲存後 8 秒會自動同步。念誦紀錄與打卡會合併，其他資料以較新的一方為準。</div>`
+  :`<p class="small muted" style="margin-top:0">把資料存到你自己 GitHub 帳號底下的私人 Gist，讓手機和電腦互通。</p>
+    <ol class="small" style="padding-left:1.2em;margin:6px 0">
+      <li>打開 <a href="https://github.com/settings/tokens/new?scopes=gist&description=%E8%A3%9F%E7%AC%A0%E5%90%8C%E6%AD%A5" target="_blank" rel="noopener">建立 Token 頁面</a>，只勾選 <b>gist</b>，按最下方產生。</li>
+      <li>把 <b>ghp_</b> 開頭的 Token 貼到下方（每台裝置各貼一次）。</li>
+      <li>建議設一組<b>加密密碼</b>，每台裝置要輸入相同的密碼。忘記就無法解開雲端資料。</li>
+    </ol>
+    <label class="f">GitHub Token<input type="password" id="syncTok" autocomplete="off" placeholder="ghp_…"></label>
+    <label class="f">加密密碼（選填，建議）<input type="password" id="syncPass" autocomplete="off"></label>
+    <button class="btn pri" data-act="syncConnect">連線並同步</button>`}
+  <div class="hint" style="margin-top:10px">注意：Token 與密碼只存在這台裝置的瀏覽器，不會放進備份檔。Gist 為「秘密」性質，知道網址的人可讀取，沒設加密密碼的話內容是明文，含家人／毛孩子資料與照片。</div>
+  </div>`;
+}
 function pSet(){
   const st=S.settings;
   return `
@@ -580,6 +721,7 @@ function pSet(){
   <div class="card"><h2>結尾文（Ending）</h2>
     <textarea rows="3" data-in="ending">${h(S.ending)}</textarea>
     <div class="hint">可用 {稱謂}、{名} 代入名稱。</div></div>
+  ${pSyncCard()}
   <div class="card"><h2>備份與還原</h2>
     <p class="muted small" style="margin-top:0">資料只存在這個瀏覽器裡。換裝置或清除瀏覽器資料前，請先匯出備份。</p>
     <div class="row"><button class="btn pri" data-act="export">⬇ 匯出備份</button>
@@ -803,7 +945,7 @@ function rdTap(){
 }
 function rdUndo(){
   const l=R.sessionLogs.pop();if(!l)return;
-  S.logs=S.logs.filter(x=>x.id!==l.id);R.count--;save();updateRd();
+  S.logs=S.logs.filter(x=>x.id!==l.id);S.delLogs.push(l.id);R.count--;save();updateRd();
 }
 function rdFinish(){
   R.sessionLogs.forEach(l=>l.targetIds=[...R.targetIds]);
@@ -828,7 +970,7 @@ const A={
   quick:d=>{
     const s=sutra(d.id);
     if(+d.v>0){S.logs.push({id:uid(),date:today(),ts:Date.now(),sutraId:s.id,name:s.name,n:1,targetIds:[]});S.lastActivity=Date.now()}
-    else{const i=S.logs.map(l=>l.date===today()&&l.sutraId===s.id).lastIndexOf(true);if(i>=0)S.logs.splice(i,1)}
+    else{const i=S.logs.map(l=>l.date===today()&&l.sutraId===s.id).lastIndexOf(true);if(i>=0){S.delLogs.push(S.logs[i].id);S.logs.splice(i,1)}}
     if(allPlanDone())checkin();
     save();render();
   },
@@ -874,6 +1016,16 @@ const A={
     save();closeModal();render();
   },
   tplDel:d=>{if(confirm('刪除這個範本？')){S[d.kind]=S[d.kind].filter(x=>x.id!==d.id);save();render()}},
+  syncConnect:async()=>{
+    const tok=($('#syncTok')||{}).value&&$('#syncTok').value.trim(),pass=($('#syncPass')||{}).value||'';
+    if(!tok){toast('請貼上 GitHub Token');return}
+    Sync.setCfg({token:tok,pass,gistId:'',last:0,err:''});
+    toast('連線中…');await Sync.run({manual:true,first:true});
+    if(Sync.cfg().err&&!Sync.cfg().last){Sync.setCfg({token:'',pass:''});}
+    render();
+  },
+  syncNow:async()=>{await Sync.run({manual:true});render()},
+  syncOff:()=>{if(confirm('中斷同步？本機資料與雲端資料都會保留，之後可重新連線。')){try{localStorage.removeItem(SK)}catch(e){}render();toast('已中斷同步')}},
   /* 備份 */
   export:()=>{
     S.settings.lastExport=Date.now();save();
@@ -883,7 +1035,7 @@ const A={
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     render();toast('備份已下載');
   },
-  wipe:()=>{if(confirm('確定清除全部資料？此動作無法復原，建議先匯出備份。')&&confirm('再次確認：真的要清除全部資料嗎？')){localStorage.removeItem(KEY);S=defaults();save();render()}},
+  wipe:()=>{if(confirm('確定清除全部資料？此動作無法復原，建議先匯出備份。\n（本機的同步連線會一併中斷，雲端資料不會被動到。）')&&confirm('再次確認：真的要清除全部資料嗎？')){localStorage.removeItem(KEY);try{localStorage.removeItem(SK)}catch(e){}S=defaults();save();render()}},
   /* 念誦畫面 */
   rdClose:()=>{if(R&&R.sessionLogs.length&&R.stage==='read'){R.stage='dedicate';renderReader()}else closeReader()},
   rdZy:()=>{S.settings.zy=!S.settings.zy;save();renderReader()},
@@ -945,6 +1097,7 @@ document.addEventListener('keydown',e=>{
 });
 
 render();
+if(Sync.on())Sync.run();
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 </script>
 </body>
