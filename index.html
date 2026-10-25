@@ -73,17 +73,13 @@ nav.nav button.on{color:var(--acc);font-weight:700}
 .btn.sm{padding:3px 10px;min-height:32px;font-size:.88rem}
 .btn.dng{color:var(--warn);border-color:var(--soft-pink)}
 .btn.big{width:100%;min-height:56px;font-size:1.15rem;border-radius:16px}
-.faq{border-top:1px solid var(--line,rgba(128,128,128,.25));padding:8px 0}
-.faq summary{cursor:pointer;font-weight:600}
-.faq p{margin:6px 0 2px;color:var(--muted);font-size:.92rem;line-height:1.6}
+.faqq{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:8px 0;background:none;border:0;border-top:1px solid var(--line,rgba(128,128,128,.25));font:inherit;font-weight:600;color:inherit;text-align:left;cursor:pointer;min-height:44px}
 .rdctl{display:flex;gap:10px;align-items:center}
 .rdctl>.grow{flex:1;min-width:0}
 .mkcol{flex:none;text-align:center}
 .btn.big.mokugyo{display:flex;align-items:center;justify-content:center;width:92px;height:92px;min-height:0;padding:0;border-radius:50%;margin:0 auto}
 .mokugyo svg{width:62px;height:62px;flex:none}
-.faqbox{max-height:228px;overflow:auto;-webkit-overflow-scrolling:touch}
-.faq .row{margin-top:8px;justify-content:flex-end}
-.mokugyo .mal{transform-origin:54px 8px;transform:rotate(16deg)}
+.faqbox{max-height:228px;overflow:auto;-webkit-overflow-scrolling:touch}.mokugyo .mal{transform-origin:54px 8px;transform:rotate(16deg)}
 .mokugyo.hit .mal{animation:tok .24s ease-out}
 .mokugyo.hit .bd{animation:tokb .24s ease-out;transform-origin:32px 40px}
 @keyframes tok{0%{transform:rotate(16deg)}40%{transform:rotate(-10deg)}100%{transform:rotate(16deg)}}
@@ -800,9 +796,17 @@ const FAQ=[
 const faqList=()=>S.faq||FAQ.map((q,i)=>({id:'q'+i,q:q[0],a:q[1]}));
 function pFaq(){
   return `<div class="card"><h2><span>常見問題 FAQ</span><button class="btn sm" data-act="faqForm">＋ 新增</button></h2>
-  <div class="faqbox">${faqList().map(q=>`<details class="faq"><summary>${h(q.q)}</summary><p>${lines(q.a)}</p>
-    <div class="row"><button class="btn sm" data-act="faqMove" data-id="${q.id}" data-v="-1" aria-label="上移">↑</button><button class="btn sm" data-act="faqMove" data-id="${q.id}" data-v="1" aria-label="下移">↓</button><button class="btn sm" data-act="faqForm" data-id="${q.id}">編輯</button><button class="btn sm dng" data-act="faqDel" data-id="${q.id}">刪除</button></div></details>`).join('')||'<div class="muted small">尚無問題，按右上角「新增」。</div>'}</div>
-  <div class="hint" style="margin-top:6px">最多顯示五則，其餘請上下滑動閱讀。</div></div>`;
+  <div class="faqbox">${faqList().map(q=>`<button class="faq faqq" data-act="faqView" data-id="${q.id}"><span>${h(q.q)}</span><span class="muted">›</span></button>`).join('')||'<div class="muted small">尚無問題，按右上角「新增」。</div>'}</div>
+  <div class="hint" style="margin-top:6px">點問題可看回答；最多顯示五則，其餘請上下滑動。</div></div>`;
+}
+function faqView(id){
+  const q=faqList().find(x=>x.id===id);if(!q)return;
+  modal(`<button class="btn mx" data-act="closeModal" aria-label="關閉">✕</button><h3>${h(q.q)}</h3>
+   <div class="paper small" style="margin-top:8px">${lines(q.a)}</div>
+   <div class="sticky-act">
+     <button class="btn sm" data-act="faqMove" data-id="${q.id}" data-v="-1" aria-label="上移">↑</button><button class="btn sm" data-act="faqMove" data-id="${q.id}" data-v="1" aria-label="下移">↓</button>
+     <button class="btn dng sm" data-act="faqDel" data-id="${q.id}">刪除</button><button class="btn pri sm" data-act="faqForm" data-id="${q.id}">編輯</button>
+   </div>`);
 }
 function faqForm(id){
   const q=id?faqList().find(x=>x.id===id):{};
@@ -1199,9 +1203,10 @@ const A={
     if(i<0||j<0||j>=a.length)return;
     [a[i],a[j]]=[a[j],a[i]];S.faq=a;save();
     const bx=$('.faqbox'),y=bx?bx.scrollTop:0;render();
-    const nb=$('.faqbox');if(nb){nb.scrollTop=y;const dt=[...nb.querySelectorAll('details')][j];if(dt)dt.open=true}
+    const nb=$('.faqbox');if(nb)nb.scrollTop=y;toast('已移動');
   },
-  faqDel:d=>{if(confirm('刪除這則問題？')){S.faq=faqList().filter(x=>x.id!==d.id);save();render()}},
+  faqView:d=>faqView(d.id),
+  faqDel:d=>{if(confirm('刪除這則問題？')){S.faq=faqList().filter(x=>x.id!==d.id);save();closeModal();render()}},
   /* 範本 */
   tplForm:d=>tplForm(d.kind,d.id),
   tplSave:d=>{
