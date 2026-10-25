@@ -801,7 +801,7 @@ const faqList=()=>S.faq||FAQ.map((q,i)=>({id:'q'+i,q:q[0],a:q[1]}));
 function pFaq(){
   return `<div class="card"><h2><span>常見問題 FAQ</span><button class="btn sm" data-act="faqForm">＋ 新增</button></h2>
   <div class="faqbox">${faqList().map(q=>`<details class="faq"><summary>${h(q.q)}</summary><p>${lines(q.a)}</p>
-    <div class="row"><button class="btn sm" data-act="faqForm" data-id="${q.id}">編輯</button><button class="btn sm dng" data-act="faqDel" data-id="${q.id}">刪除</button></div></details>`).join('')||'<div class="muted small">尚無問題，按右上角「新增」。</div>'}</div>
+    <div class="row"><button class="btn sm" data-act="faqMove" data-id="${q.id}" data-v="-1" aria-label="上移">↑</button><button class="btn sm" data-act="faqMove" data-id="${q.id}" data-v="1" aria-label="下移">↓</button><button class="btn sm" data-act="faqForm" data-id="${q.id}">編輯</button><button class="btn sm dng" data-act="faqDel" data-id="${q.id}">刪除</button></div></details>`).join('')||'<div class="muted small">尚無問題，按右上角「新增」。</div>'}</div>
   <div class="hint" style="margin-top:6px">最多顯示五則，其餘請上下滑動閱讀。</div></div>`;
 }
 function faqForm(id){
@@ -1008,7 +1008,7 @@ function evView(k,date){
 /* --- 範本 --- */
 function tplForm(kind,id){
   const t=id?S[kind].find(x=>x.id===id):{};
-  const tip=kind==='barriers'?'可用 {稱謂}、{名}、{佛號}、{經名} 自動代入；注音寫法：字ㄗˋ 或 字[Om]。':kind==='dedications'?'「建議迴向對象」以頓號分隔。內容中寫 {迴向對象}，念誦時若有指定對象，會自動換成對象的名字（未指定則為「法界一切眾生」）。':'';
+  const tip=kind==='barriers'?'可用 {稱謂}、{名}、{佛號}、{經名} 自動代入；注音寫法：字ㄗˋ 或 字[Om]。':kind==='dedications'?'「建議迴向對象」以頓號分隔。內容中寫 {稱謂}{名} 會自動帶入設定頁的稱謂與名稱（例如：信女甲乙丙）。內容中寫 {迴向對象}，念誦時若有指定對象，會自動換成對象的名字（未指定則為「法界一切眾生」）。':'';
   modal(`<h3>${id?'編輯':'新增'}範本</h3>
    <label class="f">名稱<input type="text" name="name" value="${h(t.name||'')}"></label>
    <label class="f">${kind==='barriers'?'提示說明':'建議迴向對象'}<input type="text" name="hint" value="${h(t.hint||'')}"></label>
@@ -1075,7 +1075,7 @@ function renderReader(){
     body=`<h3 style="margin-bottom:8px">圓滿結束</h3>
       ${allPlanDone()?`<div class="small muted">🪷 今日功課圓滿</div>
         <div>${S.finals.map(x=>`<button class="chip ${f&&x.id===f.id?'on':''}" data-act="rdPick" data-k="finalId" data-v="${x.id}">${h(x.name)}</button>`).join('')}</div>
-        <div class="paper"><div class="rd-text center" style="--fs:.9">${lines(f?f.content:'')}</div></div>`:''}
+        <div class="paper"><div class="rd-text center" style="--fs:.9">${lines(fill(f?f.content:'',ctx))}</div></div>`:''}
       <div class="paper"><div class="rd-text" style="--fs:.95">${lines(fill(S.ending,ctx))}</div></div>`;
     foot=`<div class="row"><button class="btn pri grow" data-act="closeReader">🙏 完成</button></div>`;
   }else{
@@ -1193,6 +1193,13 @@ const A={
     S.faq=faqList().map(x=>({...x}));
     if(d.id)Object.assign(S.faq.find(x=>x.id===d.id),{q,a});else S.faq.push({id:uid(),q,a});
     save();closeModal();render();
+  },
+  faqMove:d=>{
+    const a=faqList().map(x=>({...x})),i=a.findIndex(x=>x.id===d.id),j=i+ +d.v;
+    if(i<0||j<0||j>=a.length)return;
+    [a[i],a[j]]=[a[j],a[i]];S.faq=a;save();
+    const bx=$('.faqbox'),y=bx?bx.scrollTop:0;render();
+    const nb=$('.faqbox');if(nb){nb.scrollTop=y;const dt=[...nb.querySelectorAll('details')][j];if(dt)dt.open=true}
   },
   faqDel:d=>{if(confirm('刪除這則問題？')){S.faq=faqList().filter(x=>x.id!==d.id);save();render()}},
   /* 範本 */
