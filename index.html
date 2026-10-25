@@ -596,7 +596,10 @@ function pHome(){
   const ups=[];const now=new Date();
   for(let i=0;i<=30;i++){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12);eventsOn(d).filter(e=>e.t!=='monthly'&&(e.day===1||i===0)).forEach(e=>ups.push({d,e}))}
   const needBackup=S.logs.length>0&&Date.now()-S.settings.lastExport>14*864e5;
+  const fests=eventsOn(new Date(new Date().setHours(12))).filter(e=>e.t==='fest'||e.t==='custom');
+  const festBox=fests.length?`<div class="card" style="padding:10px 14px">${fests.map(e=>`<div style="padding:3px 0"><b style="color:var(--acc)">🪷 ${h(e.title)}</b>${e.type?` <span class="tag">${h(e.type)}</span>`:''}${e.span>1?` <span class="muted small">（第 ${e.day} 天／共 ${e.span} 天）</span>`:''}${e.practice||e.brief?`<div class="small muted" style="margin-top:2px">${lines(e.practice||e.brief)}</div>`:''}</div>`).join('')}</div>`:'';
   return `
+  ${festBox}
   ${!S.settings.name?`<div class="banner">請先到「設定」填入您的名稱，結界文與迴向文會自動帶入。<button class="btn sm" data-act="nav" data-v="set">前往設定</button></div>`:''}
   ${needBackup?`<div class="banner">已超過 14 天沒有備份，建議到「設定」匯出備份，避免換裝置或清除瀏覽器資料時遺失。</div>`:''}
   <div class="card">
