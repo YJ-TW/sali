@@ -502,6 +502,8 @@ function lunarMatch(d0,lm,ld){
   if(ld===30&&l.d===29){const ln=lunar(new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+1,12));return !!ln&&ln.d===1}
   return false;
 }
+/* 該國曆年內第一次出現的農曆月日（不含閏月）；找不到回傳空字串 */
+function lunarToSolar(y,lm,ld){for(let i=0;i<366;i++){const d=new Date(y,0,1+i,12);if(d.getFullYear()!==y)break;if(lunarMatch(d,lm,ld))return ds(d)}return ''}
 const dayShift=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n,12);
 const evSpan=e=>{if(!e.endDate||e.endDate<=e.date)return 1;return Math.min(60,Math.round((parseD(e.endDate)-parseD(e.date))/864e5)+1)};
 function eventsOn(d){
@@ -962,14 +964,28 @@ function tgDedicate(id){
 function typeInput(v){return `<input type="text" name="type" list="evtypes" value="${h(v||'')}" placeholder="選擇或自訂，例如：法會"><datalist id="evtypes">${EVT_TYPES.map(t=>`<option value="${t}">`).join('')}</datalist>`}
 function evForm(id,date){
   const e=id?S.events.find(x=>x.id===id):{repeat:'none',date:date||today(),type:'法會'};
+  const cal=e.cal||(e.repeat==='lunar'?'lunar':'solar'),l0=lunar(parseD(e.date))||{m:1,d:1};
+  const lm=e.lm||l0.m,ld=e.ld||l0.d,lrep=e.repeat==='lunar'?'lunar':'none';
   modal(`<h3>${id?'編輯':'新增'}行程／節日</h3>
    <label class="f">名稱<input type="text" name="title" value="${h(e.title||'')}" placeholder="例如：地藏法會"></label>
    <label class="f">類型${typeInput(e.type)}</label>
-   <div class="two">
-    <label class="f">開始日期（國曆）<input type="date" name="date" value="${h(e.date)}"></label>
-    <label class="f">結束日期（連續多天才填）<input type="date" name="endDate" value="${h(e.endDate||'')}"></label>
+   <label class="f">日期類型<select name="cal" data-in="evcal"><option value="solar" ${cal==='solar'?'selected':''}>國曆</option><option value="lunar" ${cal==='lunar'?'selected':''}>農曆</option></select></label>
+   <div id="evSolar" ${cal==='solar'?'':'hidden'}>
+    <div class="two">
+     <label class="f">開始日期（國曆）<input type="date" name="date" value="${h(e.date)}"></label>
+     <label class="f">結束日期（連續多天才填）<input type="date" name="endDate" value="${h(e.endDate||'')}"></label>
+    </div>
+    <label class="f">重複<select name="repeat"><option value="none" ${e.repeat!=='solar'?'selected':''}>不重複</option><option value="solar" ${e.repeat==='solar'?'selected':''}>每年（同國曆日期）</option></select></label>
    </div>
-   <label class="f">重複<select name="repeat"><option value="none" ${e.repeat==='none'?'selected':''}>不重複</option><option value="solar" ${e.repeat==='solar'?'selected':''}>每年（同國曆日期）</option><option value="lunar" ${e.repeat==='lunar'?'selected':''}>每年（同農曆日期）</option></select></label>
+   <div id="evLunar" ${cal==='lunar'?'':'hidden'}>
+    <div class="two">
+     <label class="f">農曆月<select name="lm">${LM.map((n,i)=>`<option value="${i+1}" ${lm===i+1?'selected':''}>${n}月</option>`).join('')}</select></label>
+     <label class="f">農曆日<select name="ld">${Array.from({length:30},(_,i)=>`<option value="${i+1}" ${ld===i+1?'selected':''}>${lday(i+1)}</option>`).join('')}</select></label>
+     <label class="f">連續天數（單日填 1）<input type="number" name="lspan" min="1" max="60" value="${evSpan(e)}"></label>
+     <label class="f">重複<select name="lrepeat"><option value="lunar" ${lrep==='lunar'?'selected':''}>每年（同農曆日期）</option><option value="none" ${lrep==='none'?'selected':''}>只有這一次</option></select></label>
+    </div>
+    <label class="f">國曆年份（用來決定第一次的日期；選「只有這一次」時即為那一年）<input type="number" name="lyear" min="1900" max="2100" value="${parseD(e.date).getFullYear()}"></label>
+   </div>
    <label class="f">當日簡述（一句話）<input type="text" name="brief" value="${h(e.brief||'')}" placeholder="例如：超薦亡者、孝親報恩"></label>
    <label class="f">節日來由<textarea name="origin" rows="3">${h(e.origin||'')}</textarea></label>
    <label class="f">持修細節（念什麼、做什麼、遍數、迴向…）<textarea name="practice" rows="3">${h(e.practice||'')}</textarea></label>
@@ -1174,12 +1190,21 @@ const A={
   evForm:d=>evForm(d.id,d.date),
   evView:d=>evView(d.k,d.date),
   evSave:d=>{
-    const title=val('title'),date=val('date'),end=val('endDate');
-    if(!title||!date){toast('請填寫名稱與開始日期');return}
-    if(end&&end<date){toast('結束日期不能早於開始日期');return}
-    const o={title,type:val('type'),date,endDate:end&&end>date?end:'',repeat:val('repeat'),brief:val('brief'),origin:val('origin'),practice:val('practice'),note:val('note')};
+    const title=val('title'),cal=val('cal')||'solar';
+    let date=val('date'),end=val('endDate'),rep=val('repeat'),lm,ld;
+    if(!title){toast('請填寫名稱');return}
+    if(cal==='lunar'){
+      lm=+val('lm');ld=+val('ld');rep=val('lrepeat')==='lunar'?'lunar':'none';
+      const sp=Math.min(60,Math.max(1,+val('lspan')||1)),yr=+val('lyear')||new Date().getFullYear();
+      date=lunarToSolar(yr,lm,ld);
+      if(!date){toast('找不到這個農曆日期（'+yr+' 年），請換個年份或日期');return}
+      end=sp>1?ds(dayShift(parseD(date),sp-1)):'';
+    }else{
+      if(!date){toast('請填寫開始日期');return}
+      if(end&&end<date){toast('結束日期不能早於開始日期');return}
+    }
+    const o={title,type:val('type'),cal,date,endDate:end&&end>date?end:'',repeat:rep,lm,ld,brief:val('brief'),origin:val('origin'),practice:val('practice'),note:val('note')};
     if(evSpan(o)>=60&&end&&Math.round((parseD(end)-parseD(date))/864e5)+1>60)toast('連續天數最多 60 天，已自動截到 60 天');
-    if(o.repeat==='lunar'){const l=lunar(parseD(date));if(l){o.lm=l.m;o.ld=l.d}else o.repeat='solar'}
     if(d.id)Object.assign(S.events.find(e=>e.id===d.id),o);else S.events.push({id:uid(),...o});
     save();closeModal();render();
   },
@@ -1285,6 +1310,7 @@ document.addEventListener('change',e=>{
   if(d.in==='libkind'){LF.kind=t.value;renderLib()}
   else if(d.in==='libcat'){LF.cat=t.value;renderLib()}
   else if(d.in==='libeff'){LF.eff=t.value;renderLib()}
+  else if(d.in==='evcal'){$('#evSolar').hidden=t.value!=='solar';$('#evLunar').hidden=t.value!=='lunar'}
   else if(d.in==='tgstatus'){$('#passedBox').hidden=t.value!=='passed'}
   else if(d.in==='photo'&&t.files[0]){resizePhoto(t.files[0],u=>{tmpPhoto=u;$('#phPrev').innerHTML=`<img src="${u}" class="avatar" alt="">`})}
   else if(d.in==='import'&&t.files[0]){
