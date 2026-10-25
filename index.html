@@ -768,7 +768,7 @@ function pCal(){
 const THEMES=[['chanyi','蟬意','日式禪寺暖米色','#F5EEE3','#A6735A'],['zhuangyan','莊嚴','深藍與金，適合夜間','#0E1930','#D8B26C'],['yuebai','月白','清冷藍白','#F0F6FA','#5E8CA8'],['chenxiang','沉香','灰與暖褐','#E9E5E0','#8A6A54']];
 function tplList(kind,label){
   return `<div class="card"><h2><span>${label}</span><button class="btn sm" data-act="tplForm" data-kind="${kind}">＋ 新增</button></h2>
-  ${S[kind].map(t=>`<div class="ev"><div class="grow"><b>${h(t.name)}</b>${t.when?`<div class="small" style="color:var(--acc)">時機：${h(t.when)}</div>`:''}<div class="muted small">${h(t.content.slice(0,40).replace(/\n/g,' '))}…</div></div><button class="btn sm" data-act="tplForm" data-kind="${kind}" data-id="${t.id}">編輯</button><button class="btn sm dng" data-act="tplDel" data-kind="${kind}" data-id="${t.id}">刪除</button></div>`).join('')||'<div class="muted small">尚無範本</div>'}</div>`;
+  ${S[kind].map(t=>`<div class="ev"><div class="grow"><b>${h(t.name)}</b>${t.when?`<div class="small" style="color:var(--acc)">時機：${h(t.when)}</div>`:''}<div class="muted small">${h(t.content.slice(0,40).replace(/\n/g,' '))}…</div></div><button class="btn sm" data-act="tplMove" data-kind="${kind}" data-id="${t.id}" data-v="-1" aria-label="上移">↑</button><button class="btn sm" data-act="tplMove" data-kind="${kind}" data-id="${t.id}" data-v="1" aria-label="下移">↓</button><button class="btn sm" data-act="tplForm" data-kind="${kind}" data-id="${t.id}">編輯</button><button class="btn sm dng" data-act="tplDel" data-kind="${kind}" data-id="${t.id}">刪除</button></div>`).join('')||'<div class="muted small">尚無範本</div>'}</div>`;
 }
 
 function pSyncCard(){
@@ -1250,6 +1250,11 @@ const A={
     if(d.kind!=='barriers')o.when=val('when');
     if(d.id)Object.assign(S[d.kind].find(x=>x.id===d.id),o);else S[d.kind].push({id:uid(),...o});
     save();closeModal();render();
+  },
+  tplMove:d=>{
+    const a=S[d.kind],i=a.findIndex(x=>x.id===d.id),j=i+ +d.v;
+    if(i<0||j<0||j>=a.length)return;
+    [a[i],a[j]]=[a[j],a[i]];save();render();
   },
   tplDel:d=>{if(confirm('刪除這個範本？')){S[d.kind]=S[d.kind].filter(x=>x.id!==d.id);save();render()}},
   syncConnect:async()=>{
