@@ -76,8 +76,13 @@ nav.nav button.on{color:var(--acc);font-weight:700}
 .faq{border-top:1px solid var(--line,rgba(128,128,128,.25));padding:8px 0}
 .faq summary{cursor:pointer;font-weight:600}
 .faq p{margin:6px 0 2px;color:var(--muted);font-size:.92rem;line-height:1.6}
-.btn.big.mokugyo{display:flex;align-items:center;justify-content:center;width:104px;height:104px;min-height:0;padding:0;border-radius:50%;margin:0 auto}
-.mokugyo svg{width:70px;height:70px;flex:none}
+.rdctl{display:flex;gap:10px;align-items:center}
+.rdctl>.grow{flex:1;min-width:0}
+.mkcol{flex:none;text-align:center}
+.btn.big.mokugyo{display:flex;align-items:center;justify-content:center;width:92px;height:92px;min-height:0;padding:0;border-radius:50%;margin:0 auto}
+.mokugyo svg{width:62px;height:62px;flex:none}
+.faqbox{max-height:228px;overflow:auto;-webkit-overflow-scrolling:touch}
+.faq .row{margin-top:8px;justify-content:flex-end}
 .mokugyo .mal{transform-origin:54px 8px;transform:rotate(16deg)}
 .mokugyo.hit .mal{animation:tok .24s ease-out}
 .mokugyo.hit .bd{animation:tokb .24s ease-out;transform-origin:32px 40px}
@@ -349,7 +354,7 @@ const Sync={
     const seeds=seedIndex(),st={};SYNC_SET.forEach(k=>st[k]=S.settings[k]);
     return{v:1,modified:S.modified,settings:st,plan:S.plan,targets:S.targets,
       logs:[...S.logs].sort((a,b)=>(a.ts-b.ts)||(a.id<b.id?-1:1)),delLogs:[...new Set(S.delLogs)].sort(),
-      checkins:[...S.checkins].sort(),events:S.events,festOv:S.festOv,barriers:S.barriers,dedications:S.dedications,finals:S.finals,ending:S.ending,
+      checkins:[...S.checkins].sort(),events:S.events,festOv:S.festOv,barriers:S.barriers,dedications:S.dedications,finals:S.finals,ending:S.ending,faq:S.faq,
       lastActivity:S.lastActivity,
       sutraCustom:S.sutras.filter(x=>!seeds[x.id]||JSON.stringify(x)!==seeds[x.id]).sort((a,b)=>a.id<b.id?-1:1),
       delSeeds:Object.keys(seeds).filter(id=>!S.sutras.some(x=>x.id===id)).sort()};
@@ -366,6 +371,7 @@ const Sync={
       SYNC_SET.forEach(k=>{if(Rm.settings&&k in Rm.settings)S.settings[k]=Rm.settings[k]});
       ['plan','targets','events','barriers','dedications','finals'].forEach(k=>{if(Array.isArray(Rm[k]))S[k]=Rm[k]});
       if(typeof Rm.ending==='string')S.ending=Rm.ending;
+      if(Array.isArray(Rm.faq))S.faq=Rm.faq;
       if(Rm.festOv&&typeof Rm.festOv==='object')S.festOv=Rm.festOv;
       S.lastActivity=Math.max(S.lastActivity||0,Rm.lastActivity||0);
       const gone=new Set(Rm.delSeeds||[]),cus=new Map((Rm.sutraCustom||[]).map(x=>[x.id,x]));
@@ -783,15 +789,27 @@ const FAQ=[
  ['念誦的流程是什麼？','結界文 → 念誦（每念完一遍按一次木魚）→ 迴向文 → 圓滿結束與結尾文。連續念下一部且間隔不久時，不會重複顯示結界文。'],
  ['「結束並迴向」會怎麼計算？','代表完成這部經今天的次數：若這部經在「今日功課」裡，系統會把今天還差的遍數一次補滿，再進入迴向文。'],
  ['迴向對象怎麼計算？','沒有指定對象時，每一遍會同時計入自己、全部家人與毛孩子（在世與已逝皆含）；指定對象時，只計入所選對象與自己。這個規則從更新後開始，舊紀錄不會回頭補。'],
- ['迴向文裡的 {迴向對象} 是什麼？','在迴向文內容寫上 {迴向對象}，念誦時若有指定對象，會自動換成他們的名字（多位以頓號分隔）；沒指定則顯示「法界一切眾生」。{稱謂}、{名}、{佛號}、{經名} 也可使用。'],
+ ['迴向文裡的 {迴向對象} 是什麼？','在迴向文內容寫上 {迴向對象}，念誦時若有指定對象，會自動換成他們的名字（多位以頓號分隔）；沒指定則換成該迴向文的「建議迴向對象」（都沒填則為「法界一切眾生」）。{稱謂}、{名}、{佛號}、{經名} 也可使用。'],
  ['迴向時機是什麼？','每篇迴向文可填寫適合使用的時機（例如：每次念誦完畢、為親友祈福時），會顯示在迴向文頁面，方便挑選。可在迴向文範本的編輯畫面修改。'],
  ['注音顯示不對或想調整怎麼辦？','設定頁可切換注音位置（字的右側或上方），念誦畫面可開關注音、用 A−／A＋ 調整字體大小。經文內容可在經文庫點開後按「編輯」修改。'],
  ['行事曆的農曆日期準嗎？可以改嗎？','農曆由瀏覽器內建曆法換算，個別年份可能與寺院日曆差一天。節日與行程都可點開編輯、隱藏，也可自行新增。'],
  ['如何跨裝置同步？','在「跨裝置同步」設定 GitHub 私人 Gist 的 Token（只需勾選 gist），兩台裝置填同一組即可。可另設加密密碼，忘記密碼無法找回。'],
  ['打卡怎麼算？','今日功課全部念完會自動打卡，也可在首頁手動打卡。']
 ];
+/* S.faq 未建立時使用內建預設；第一次新增／編輯／刪除時才複製一份存入 S */
+const faqList=()=>S.faq||FAQ.map((q,i)=>({id:'q'+i,q:q[0],a:q[1]}));
 function pFaq(){
-  return `<div class="card"><h2>常見問題 FAQ</h2>${FAQ.map(q=>`<details class="faq"><summary>${h(q[0])}</summary><p>${h(q[1])}</p></details>`).join('')}</div>`;
+  return `<div class="card"><h2><span>常見問題 FAQ</span><button class="btn sm" data-act="faqForm">＋ 新增</button></h2>
+  <div class="faqbox">${faqList().map(q=>`<details class="faq"><summary>${h(q.q)}</summary><p>${lines(q.a)}</p>
+    <div class="row"><button class="btn sm" data-act="faqForm" data-id="${q.id}">編輯</button><button class="btn sm dng" data-act="faqDel" data-id="${q.id}">刪除</button></div></details>`).join('')||'<div class="muted small">尚無問題，按右上角「新增」。</div>'}</div>
+  <div class="hint" style="margin-top:6px">最多顯示五則，其餘請上下滑動閱讀。</div></div>`;
+}
+function faqForm(id){
+  const q=id?faqList().find(x=>x.id===id):{};
+  modal(`<h3>${id?'編輯':'新增'}常見問題</h3>
+   <label class="f">問題<input type="text" name="q" value="${h(q.q||'')}"></label>
+   <label class="f">回答<textarea name="a" rows="6">${h(q.a||'')}</textarea></label>
+   <div class="sticky-act"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-act="faqSave" data-id="${id||''}">儲存</button></div>`);
 }
 function pSet(){
   const st=S.settings;
@@ -1046,12 +1064,12 @@ function renderReader(){
       ${R.tab==='text'?`<div class="rd-text paper sb ${zy?'':'nozy'} zy" style="--fs:${fs}">${fmt(sText(s,R.part))}</div>`
        :R.tab==='trans'?`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.translation?lines(s.translation):'<span class="muted">尚無白話文</span>'}</div>`
        :`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.intro?lines(s.intro):'<span class="muted">尚無介紹</span>'}${s.effects&&s.effects.length?`<div style="margin-top:8px">${s.effects.map(e=>`<span class="tag">${h(e)}</span>`).join('')}</div>`:''}</div>`}`;
-    foot=`<div>
-      <div class="small muted">迴向對象：${R.targetIds.length?'所選對象＋自己':'自己＋全部家人毛孩子（可點選指定）'}</div><div style="max-height:68px;overflow:auto"><button class="chip on" disabled style="opacity:.75">自己</button>${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>
+    foot=`<div class="rdctl"><div class="grow">
+      <div class="small muted">迴向對象：${R.targetIds.length?'所選對象＋自己':'全部（可點選指定）'}</div><div style="max-height:68px;overflow:auto"><button class="chip on" disabled style="opacity:.75">自己</button>${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>
       <div class="cnt"><b id="rdN">${R.count}</b> / <span id="rdG">${R.goal}</span> 遍 <span class="muted small">・今日累計 <span id="rdT">${doneToday(R.sutraId)}</span></span></div>
-      <button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg></button>
-      <div class="hint" style="text-align:center;margin:4px 0 8px">念畢一遍，敲一下木魚 ＋1</div>
-      <div class="row" style="margin-top:8px"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">結束並迴向</button></div></div>`;
+      <div class="row"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">結束並迴向</button></div></div>
+      <div class="mkcol"><button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg></button>
+      <div class="hint" style="margin-top:2px">念畢 ＋1</div></div></div>`;
   }else if(R.stage==='ending'){
     const f=S.finals.find(x=>x.id===R.finalId)||S.finals[0];
     body=`<h3 style="margin-bottom:8px">圓滿結束</h3>
@@ -1168,6 +1186,15 @@ const A={
   festReset:d=>{if(confirm('還原成內建的名稱、日期與說明？')){const hid=(S.festOv[d.k]||{}).hidden;if(hid)S.festOv[d.k]={hidden:true};else delete S.festOv[d.k];save();closeModal();render()}},
   festHide:d=>{if(confirm('隱藏這個節日？之後可以在行事曆頁面最下方「已隱藏的節日」還原。')){S.festOv[d.k]=Object.assign({},S.festOv[d.k]||{},{hidden:true});save();closeModal();render()}},
   festShow:d=>{const ov=Object.assign({},S.festOv[d.k]||{});delete ov.hidden;if(Object.keys(ov).length)S.festOv[d.k]=ov;else delete S.festOv[d.k];save();render()},
+  /* FAQ */
+  faqForm:d=>faqForm(d.id),
+  faqSave:d=>{
+    const q=val('q'),a=val('a');if(!q||!a){toast('請填寫問題與回答');return}
+    S.faq=faqList().map(x=>({...x}));
+    if(d.id)Object.assign(S.faq.find(x=>x.id===d.id),{q,a});else S.faq.push({id:uid(),q,a});
+    save();closeModal();render();
+  },
+  faqDel:d=>{if(confirm('刪除這則問題？')){S.faq=faqList().filter(x=>x.id!==d.id);save();render()}},
   /* 範本 */
   tplForm:d=>tplForm(d.kind,d.id),
   tplSave:d=>{
