@@ -73,6 +73,14 @@ nav.nav button.on{color:var(--acc);font-weight:700}
 .btn.sm{padding:3px 10px;min-height:32px;font-size:.88rem}
 .btn.dng{color:var(--warn);border-color:var(--soft-pink)}
 .btn.big{width:100%;min-height:56px;font-size:1.15rem;border-radius:16px}
+.mokugyo{display:flex;align-items:center;justify-content:center;gap:12px;min-height:84px}
+.mokugyo svg{width:58px;height:58px;flex:none}
+.mokugyo .mal{transform-origin:54px 8px;transform:rotate(16deg)}
+.mokugyo.hit .mal{animation:tok .24s ease-out}
+.mokugyo.hit .bd{animation:tokb .24s ease-out;transform-origin:32px 40px}
+@keyframes tok{0%{transform:rotate(16deg)}40%{transform:rotate(-10deg)}100%{transform:rotate(16deg)}}
+@keyframes tokb{40%{transform:scale(.95)}}
+.mx{position:sticky;top:0;float:right;z-index:3;margin:-6px -6px 0 8px;width:36px;height:36px;padding:0;border-radius:50%;font-size:1.1rem;line-height:1}
 .btn[disabled]{opacity:.45;cursor:default}
 .chip{display:inline-block;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:1px 11px;font-size:.82rem;margin:2px 4px 2px 0;cursor:default}
 button.chip{cursor:pointer}
@@ -524,7 +532,10 @@ const sutra=id=>S.sutras.find(s=>s.id===id);
 const sText=(s,i)=>s.parts?((s.parts[i||0]||s.parts[0]).text):s.text;
 const fullText=s=>s.parts?s.parts.map(p=>p.text).join('\n'):s.text;
 const briefOf=s=>s.brief||(s.effects||[]).join('、');
-const target=id=>S.targets.find(t=>t.id===id);
+const SELF={id:'self',name:'自己',cat:'self',status:'alive'};
+const target=id=>id==='self'?SELF:S.targets.find(t=>t.id===id);
+/* 迴向對象：未指定＝自己＋全部家人毛孩子（在世與已逝）；指定＝所選對象＋自己 */
+const effT=sel=>['self',...(sel&&sel.length?sel:S.targets.map(t=>t.id))];
 const doneToday=id=>S.logs.filter(l=>l.date===today()&&l.sutraId===id).reduce((a,l)=>a+l.n,0);
 const planItems=()=>S.plan.map(p=>({p,s:sutra(p.sutraId)})).filter(x=>x.s);
 const allPlanDone=()=>{const it=planItems();return it.length>0&&it.every(x=>doneToday(x.s.id)>=x.p.times)};
@@ -654,12 +665,13 @@ function renderLib(){
 /* --- 祈福對象 --- */
 let TG='pet';
 function pTg(){
-  const list=S.targets.filter(t=>t.cat===TG);
+  const list=TG==='self'?[SELF]:S.targets.filter(t=>t.cat===TG);
   return `
   <div class="row" style="margin:14px 0 4px;justify-content:space-between">
-    <div class="seg"><button class="${TG==='pet'?'on':''}" data-act="tgTab" data-v="pet">🐾 毛孩子</button><button class="${TG==='family'?'on':''}" data-act="tgTab" data-v="family">🏠 家人</button></div>
-    <button class="btn pri" data-act="tgForm">＋ 新增</button>
+    <div class="seg"><button class="${TG==='self'?'on':''}" data-act="tgTab" data-v="self">🙂 自己</button><button class="${TG==='pet'?'on':''}" data-act="tgTab" data-v="pet">🐾 毛孩子</button><button class="${TG==='family'?'on':''}" data-act="tgTab" data-v="family">🏠 家人</button></div>
+    ${TG==='self'?'':'<button class="btn pri" data-act="tgForm">＋ 新增</button>'}
   </div>
+  ${TG==='self'?'<div class="hint">未指定迴向對象時，功德會同時計入自己、全部家人與毛孩子（在世與已逝）；指定對象時，只計入所選對象與自己。</div>':''}
   ${list.length?list.map(tgCard).join(''):`<div class="card empty">還沒有${TG==='pet'?'毛孩子':'家人'}，按右上角「新增」。</div>`}`;
 }
 function tgCard(t){
@@ -667,13 +679,13 @@ function tgCard(t){
   const by={};logs.forEach(l=>{by[l.name]=(by[l.name]||0)+l.n});
   const total=logs.reduce((a,l)=>a+l.n,0);
   const passed=t.status==='passed';
-  const sub=t.cat==='pet'?(t.species||'毛孩子'):(t.title||'家人');
+  const sub=t.cat==='pet'?(t.species||'毛孩子'):t.cat==='self'?'':(t.title||'家人');
   return `<div class="card">
     <div class="tcard">
-      ${t.photo?`<img class="avatar" src="${t.photo}" alt="${h(t.name)}">`:`<div class="avatar">${t.cat==='pet'?'🐾':'🏠'}</div>`}
+      ${t.photo?`<img class="avatar" src="${t.photo}" alt="${h(t.name)}">`:`<div class="avatar">${t.cat==='pet'?'🐾':t.cat==='self'?'🙂':'🏠'}</div>`}
       <div class="grow">
         <h2 style="margin:0 0 2px"><span>${h(t.name)} <span class="muted small" style="font-weight:400">${h(sub)}</span></span>
-          <span class="tag" style="${passed?'':'background:var(--light-sage);color:#587059'}">${passed?'🕯 往生':'在世'}</span></h2>
+          ${t.cat==='self'?'':`<span class="tag" style="${passed?'':'background:var(--light-sage);color:#587059'}">${passed?'🕯 往生':'在世'}</span>`}</h2>
         <div class="small muted">
           ${t.birthday?`${t.cat==='pet'?'生日／領養日':'生日'}：${h(t.birthday)}　`:''}${passed&&t.passed?`往生紀念日：${h(t.passed)}`:''}
         </div>
@@ -684,8 +696,8 @@ function tgCard(t){
     </div>
     <div class="row" style="margin-top:12px">
       <button class="btn pri grow" data-act="tgDedicate" data-id="${t.id}">🙏 迴向給 ${h(t.name)}</button>
-      <button class="btn sm" data-act="tgForm" data-id="${t.id}">編輯</button>
-      <button class="btn sm dng" data-act="tgDel" data-id="${t.id}">刪除</button>
+      ${t.cat==='self'?'':`<button class="btn sm" data-act="tgForm" data-id="${t.id}">編輯</button>
+      <button class="btn sm dng" data-act="tgDel" data-id="${t.id}">刪除</button>`}
     </div>
   </div>`;
 }
@@ -799,7 +811,7 @@ const val=n=>{const e=$(`#modal [name="${n}"]`);return e?e.value.trim():''};
 /* --- 經文 --- */
 function sutraView(id,part){
   const s=sutra(id);if(!s)return;part=part||0;
-  modal(`<h3>${h(s.name)}</h3>
+  modal(`<button class="btn mx" data-act="closeModal" aria-label="關閉">✕</button><h3>${h(s.name)}</h3>
    <div>${s.category?`<span class="tag">${h(s.category)}</span>`:''}${s.era?`<span class="tag">${h(s.era)}</span>`:''}${(s.effects||[]).map(e=>`<span class="tag">${h(e)}</span>`).join('')}</div>
    <div class="muted small">建議每日 ${s.dailyCount||'—'} 遍・單遍約 ${s.durationSec?fmtDur(s.durationSec):'—'}・主護持：${h(s.deity||'—')}</div>
    ${s.parts?`<div class="seg vol">${s.parts.map((p,i)=>`<button class="${i===part?'on':''}" data-act="svPart" data-id="${s.id}" data-v="${i}">${h(p.name)}</button>`).join('')}</div>`:''}
@@ -1008,9 +1020,9 @@ function renderReader(){
        :R.tab==='trans'?`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.translation?lines(s.translation):'<span class="muted">尚無白話文</span>'}</div>`
        :`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.intro?lines(s.intro):'<span class="muted">尚無介紹</span>'}${s.effects&&s.effects.length?`<div style="margin-top:8px">${s.effects.map(e=>`<span class="tag">${h(e)}</span>`).join('')}</div>`:''}</div>`}`;
     foot=`<div>
-      ${S.targets.length?`<div class="small muted">為誰祈福：</div><div style="max-height:68px;overflow:auto">${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>`:''}
+      <div class="small muted">迴向對象：${R.targetIds.length?'所選對象＋自己':'自己＋全部家人毛孩子（可點選指定）'}</div><div style="max-height:68px;overflow:auto"><button class="chip on" disabled style="opacity:.75">自己</button>${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>
       <div class="cnt"><b id="rdN">${R.count}</b> / <span id="rdG">${R.goal}</span> 遍 <span class="muted small">・今日累計 <span id="rdT">${doneToday(R.sutraId)}</span></span></div>
-      <button class="btn pri big" data-act="rdTap">念畢一遍 ＋1</button>
+      <button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg><span>念畢一遍 ＋1</span></button>
       <div class="row" style="margin-top:8px"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">結束並迴向</button></div></div>`;
   }else if(R.stage==='ending'){
     const f=S.finals.find(x=>x.id===R.finalId)||S.finals[0];
@@ -1022,7 +1034,7 @@ function renderReader(){
     foot=`<div class="row"><button class="btn pri grow" data-act="closeReader">🙏 完成</button></div>`;
   }else{
     const d=S.dedications.find(x=>x.id===R.dedId)||S.dedications[0];
-    const names=S.targets.filter(t=>R.targetIds.includes(t.id)).map(t=>t.name);
+    const names=effT(R.targetIds).map(id=>target(id)).filter(Boolean).map(t=>t.name);
     const sugg=d&&d.hint?d.hint.split(/[、，,]/).map(x=>x.trim()).filter(Boolean):[];
     const next=planItems().find(x=>x.s.id!==R.sutraId&&doneToday(x.s.id)<x.p.times);
     body=`<div class="hint">本次念誦 <b>${h(s.name)}</b> × ${R.count} 遍</div>
@@ -1042,8 +1054,9 @@ function updateRd(){
 }
 function rdTap(){
   const s=sutra(R.sutraId);
-  const l={id:uid(),date:today(),ts:Date.now(),sutraId:s.id,name:s.name,n:1,targetIds:[...R.targetIds]};
+  const l={id:uid(),date:today(),ts:Date.now(),sutraId:s.id,name:s.name,n:1,targetIds:effT(R.targetIds)};
   S.logs.push(l);R.sessionLogs.push(l);R.count++;S.lastActivity=Date.now();save();updateRd();
+  const mk=$('#rdMok');if(mk){mk.classList.remove('hit');void mk.offsetWidth;mk.classList.add('hit')}
   if(navigator.vibrate)try{navigator.vibrate(20)}catch(e){}
   if(R.count===R.goal){toast('本次遍數圓滿 🙏');setTimeout(()=>{if(R&&R.stage==='read'&&R.count>=R.goal){R.stage='dedicate';renderReader()}},800)}
 }
@@ -1052,7 +1065,7 @@ function rdUndo(){
   S.logs=S.logs.filter(x=>x.id!==l.id);S.delLogs.push(l.id);R.count--;save();updateRd();
 }
 function rdFinish(){
-  R.sessionLogs.forEach(l=>l.targetIds=[...R.targetIds]);
+  R.sessionLogs.forEach(l=>l.targetIds=effT(R.targetIds));
   S.lastActivity=Date.now();
   if(allPlanDone()&&checkin())toast('今日功課圓滿，已為您打卡 🪷');else toast('功德圓滿 🙏');
   save();R.stage='ending';renderReader();
@@ -1167,14 +1180,18 @@ const A={
   rdSkip:()=>{R.stage='read';renderReader()},
   rdTog:d=>{const i=R.targetIds.indexOf(d.id);i>=0?R.targetIds.splice(i,1):R.targetIds.push(d.id);renderReader()},
   rdTap,rdUndo,
-  rdDone:()=>{R.stage='dedicate';renderReader()},
+  rdDone:()=>{
+    const s=sutra(R.sutraId),p=s&&S.plan.find(x=>x.sutraId===s.id),rem=p?p.times-doneToday(s.id):0;
+    if(rem>0){const l={id:uid(),date:today(),ts:Date.now(),sutraId:s.id,name:s.name,n:rem,targetIds:effT(R.targetIds)};
+      S.logs.push(l);R.sessionLogs.push(l);R.count+=rem;S.lastActivity=Date.now();save();toast('已補足今日 '+s.name+' 共 '+p.times+' 遍 🙏')}
+    R.stage='dedicate';renderReader()},
   rdBack:()=>{R.stage='read';renderReader()},
   rdExtraTog:d=>{const i=R.extra.indexOf(d.v);i>=0?R.extra.splice(i,1):R.extra.push(d.v);renderReader()},
   rdExtraAdd:()=>{const v=$('#rdExtraIn').value.trim();if(v&&!R.extra.includes(v)){R.extra.push(v);renderReader()}},
   rdNext:d=>{rdFinish0();openReader(d.id,{skipBarrier:true})},
   rdFinish,closeReader
 };
-function rdFinish0(){R.sessionLogs.forEach(l=>l.targetIds=[...R.targetIds]);S.lastActivity=Date.now();save();closeReaderQuiet()}
+function rdFinish0(){R.sessionLogs.forEach(l=>l.targetIds=effT(R.targetIds));S.lastActivity=Date.now();save();closeReaderQuiet()}
 function closeReaderQuiet(){R=null;$('#reader').hidden=true;$('#reader').innerHTML='';document.body.style.overflow='';try{if(wake){wake.release();wake=null}}catch(e){}}
 
 document.addEventListener('click',e=>{
