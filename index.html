@@ -73,6 +73,9 @@ nav.nav button.on{color:var(--acc);font-weight:700}
 .btn.sm{padding:3px 10px;min-height:32px;font-size:.88rem}
 .btn.dng{color:var(--warn);border-color:var(--soft-pink)}
 .btn.big{width:100%;min-height:56px;font-size:1.15rem;border-radius:16px}
+.faq{border-top:1px solid var(--line,rgba(128,128,128,.25));padding:8px 0}
+.faq summary{cursor:pointer;font-weight:600}
+.faq p{margin:6px 0 2px;color:var(--muted);font-size:.92rem;line-height:1.6}
 .mokugyo{display:flex;align-items:center;justify-content:center;gap:12px;min-height:84px}
 .mokugyo svg{width:58px;height:58px;flex:none}
 .mokugyo .mal{transform-origin:54px 8px;transform:rotate(16deg)}
@@ -284,9 +287,9 @@ function defaults(){return{
   {id:'b4',name:'簡易結界／替代方式',hint:'',content:'• 觀想：心中觀想諸佛菩薩放光加持，或是觀想周遭環境清淨、外在眾生在屋外聽經領功德。\n• 持咒：念幾遍大悲咒、六字大明咒（108 遍或數遍），或播放清淨的佛號／咒語音檔。\n• 禮佛／請聖：面對佛堂或窗外，誠心禮佛，或念「南無本師釋迦牟尼佛」數遍。'}
  ],
  dedications:[
-  {id:'d1',name:'迴向給眾生',hint:'',content:'願以此功德，普及於一切，\n我等與眾生，皆共成佛道。'},
-  {id:'d2',name:'通用迴向',hint:'自己、家人平安、法界一切眾生、歷代祖先、身體健康',content:'願以此功德，莊嚴佛淨土，\n上報四重恩，下濟三途苦，\n若有見聞者，悉發菩提心，\n盡此一報身，同生極樂國。'},
-  {id:'d3',name:'消災迴向',hint:'法界一切眾生、歷代祖先、冤親債主',content:'願以此功德，消災延壽，業障消除，福慧增長，六親眷屬，離苦得樂，一切眾生，同沐佛恩。'}
+  {id:'d1',name:'迴向給眾生',hint:'',when:'每次念誦完畢後，通用',content:'願以此功德，普及於一切，\n我等與眾生，皆共成佛道。'},
+  {id:'d2',name:'通用迴向',hint:'自己、家人平安、法界一切眾生、歷代祖先、身體健康',when:'念誦完畢、準備結束時；也適合法會圓滿',content:'願以此功德，莊嚴佛淨土，\n上報四重恩，下濟三途苦，\n若有見聞者，悉發菩提心，\n盡此一報身，同生極樂國。'},
+  {id:'d3',name:'消災迴向',hint:'法界一切眾生、歷代祖先、冤親債主',when:'為家人、毛孩子祈求平安消災，或身體違和時',content:'願以此功德，迴向 {迴向對象}，消災延壽，業障消除，福慧增長，六親眷屬，離苦得樂，一切眾生，同沐佛恩。'}
  ],
  finals:[
   {id:'f1',name:'今日圓滿迴向',hint:'',content:'願消除三障諸煩惱，\n願得智慧真明了，\n普願災障悉消除，\n世世常行菩薩道。\n\n願生西方淨土中，\n九品蓮華為父母，\n花開見佛悟無生，\n不退菩薩為伴侶。\n\n願以此功德，\n莊嚴佛淨土，\n上報四重恩，\n下濟三途苦，\n若有見聞者，\n悉發菩提心，\n盡此一報身，\n同生極樂國。'}
@@ -301,6 +304,10 @@ function load(){
       const dz=m.sutras.find(t=>t.id==='s_dizangjing'),sd=sm.find(t=>t.id==='s_dizangjing');
       if(dz&&sd&&!dz.parts){dz.parts=sd.parts;dz.text=''}
       m.libV=LIB_V}
+    const dd=defaults();
+    m.dedications.forEach(x=>{const s=dd.dedications.find(y=>y.id===x.id);if(!s)return;
+      if(x.when===undefined)x.when=s.when;
+      if(x.id==='d3'&&x.content==='願以此功德，消災延壽，業障消除，福慧增長，六親眷屬，離苦得樂，一切眾生，同沐佛恩。')x.content=s.content});
     m.delLogs=m.delLogs||[];m.modified=m.modified||0;m.festOv=m.festOv||{};
     return m}}catch(e){}
   return defaults();
@@ -549,6 +556,7 @@ function checkin(){const t=today();if(!S.checkins.includes(t)){S.checkins.push(t
 const who=()=>S.settings.title+(S.settings.name||'＿＿');
 function fill(t,ctx={}){
   return String(t||'').replace(/\{稱謂\}/g,S.settings.title).replace(/\{名\}/g,S.settings.name||'＿＿')
+    .replace(/\{迴向對象\}/g,ctx.tg||'法界一切眾生')
     .replace(/\{佛號\}/g,ctx.deity||'本師釋迦牟尼佛').replace(/\{經名\}/g,ctx.name||'經文');
 }
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
@@ -746,7 +754,7 @@ function pCal(){
 const THEMES=[['chanyi','蟬意','日式禪寺暖米色','#F5EEE3','#A6735A'],['zhuangyan','莊嚴','深藍與金，適合夜間','#0E1930','#D8B26C'],['yuebai','月白','清冷藍白','#F0F6FA','#5E8CA8'],['chenxiang','沉香','灰與暖褐','#E9E5E0','#8A6A54']];
 function tplList(kind,label){
   return `<div class="card"><h2><span>${label}</span><button class="btn sm" data-act="tplForm" data-kind="${kind}">＋ 新增</button></h2>
-  ${S[kind].map(t=>`<div class="ev"><div class="grow"><b>${h(t.name)}</b><div class="muted small">${h(t.content.slice(0,40).replace(/\n/g,' '))}…</div></div><button class="btn sm" data-act="tplForm" data-kind="${kind}" data-id="${t.id}">編輯</button><button class="btn sm dng" data-act="tplDel" data-kind="${kind}" data-id="${t.id}">刪除</button></div>`).join('')||'<div class="muted small">尚無範本</div>'}</div>`;
+  ${S[kind].map(t=>`<div class="ev"><div class="grow"><b>${h(t.name)}</b>${t.when?`<div class="small" style="color:var(--acc)">時機：${h(t.when)}</div>`:''}<div class="muted small">${h(t.content.slice(0,40).replace(/\n/g,' '))}…</div></div><button class="btn sm" data-act="tplForm" data-kind="${kind}" data-id="${t.id}">編輯</button><button class="btn sm dng" data-act="tplDel" data-kind="${kind}" data-id="${t.id}">刪除</button></div>`).join('')||'<div class="muted small">尚無範本</div>'}</div>`;
 }
 
 function pSyncCard(){
@@ -767,6 +775,22 @@ function pSyncCard(){
     <button class="btn pri" data-act="syncConnect">連線並同步</button>`}
   <div class="hint" style="margin-top:10px">注意：Token 與密碼只存在這台裝置的瀏覽器，不會放進備份檔。Gist 為「秘密」性質，知道網址的人可讀取，沒設加密密碼的話內容是明文，含家人／毛孩子資料與照片。</div>
   </div>`;
+}
+const FAQ=[
+ ['資料存在哪裡？換手機會不見嗎？','所有資料只存在這個瀏覽器（這台裝置）。換手機或清除瀏覽器資料前，請先到下方「備份與還原」匯出備份，或開啟「跨裝置同步」。'],
+ ['怎麼把 App 裝到手機桌面？','用手機瀏覽器打開網站：iPhone 請用 Safari，按「分享」→「加入主畫面」；Android 請用 Chrome，按選單→「安裝應用程式」。'],
+ ['念誦的流程是什麼？','結界文 → 念誦（每念完一遍按一次木魚）→ 迴向文 → 圓滿結束與結尾文。連續念下一部且間隔不久時，不會重複顯示結界文。'],
+ ['「結束並迴向」會怎麼計算？','代表完成這部經今天的次數：若這部經在「今日功課」裡，系統會把今天還差的遍數一次補滿，再進入迴向文。'],
+ ['迴向對象怎麼計算？','沒有指定對象時，每一遍會同時計入自己、全部家人與毛孩子（在世與已逝皆含）；指定對象時，只計入所選對象與自己。這個規則從更新後開始，舊紀錄不會回頭補。'],
+ ['迴向文裡的 {迴向對象} 是什麼？','在迴向文內容寫上 {迴向對象}，念誦時若有指定對象，會自動換成他們的名字（多位以頓號分隔）；沒指定則顯示「法界一切眾生」。{稱謂}、{名}、{佛號}、{經名} 也可使用。'],
+ ['迴向時機是什麼？','每篇迴向文可填寫適合使用的時機（例如：每次念誦完畢、為親友祈福時），會顯示在迴向文頁面，方便挑選。可在迴向文範本的編輯畫面修改。'],
+ ['注音顯示不對或想調整怎麼辦？','設定頁可切換注音位置（字的右側或上方），念誦畫面可開關注音、用 A−／A＋ 調整字體大小。經文內容可在經文庫點開後按「編輯」修改。'],
+ ['行事曆的農曆日期準嗎？可以改嗎？','農曆由瀏覽器內建曆法換算，個別年份可能與寺院日曆差一天。節日與行程都可點開編輯、隱藏，也可自行新增。'],
+ ['如何跨裝置同步？','在「跨裝置同步」設定 GitHub 私人 Gist 的 Token（只需勾選 gist），兩台裝置填同一組即可。可另設加密密碼，忘記密碼無法找回。'],
+ ['打卡怎麼算？','今日功課全部念完會自動打卡，也可在首頁手動打卡。']
+];
+function pFaq(){
+  return `<div class="card"><h2>常見問題 FAQ</h2>${FAQ.map(q=>`<details class="faq"><summary>${h(q[0])}</summary><p>${h(q[1])}</p></details>`).join('')}</div>`;
 }
 function pSet(){
   const st=S.settings;
@@ -794,6 +818,7 @@ function pSet(){
     <textarea rows="3" data-in="ending">${h(S.ending)}</textarea>
     <div class="hint">可用 {稱謂}、{名} 代入名稱。</div></div>
   ${pSyncCard()}
+  ${pFaq()}
   <div class="card"><h2>備份與還原</h2>
     <p class="muted small" style="margin-top:0">資料只存在這個瀏覽器裡。換裝置或清除瀏覽器資料前，請先匯出備份。</p>
     <div class="row"><button class="btn pri" data-act="export">⬇ 匯出備份</button>
@@ -964,11 +989,12 @@ function evView(k,date){
 /* --- 範本 --- */
 function tplForm(kind,id){
   const t=id?S[kind].find(x=>x.id===id):{};
-  const tip=kind==='barriers'?'可用 {稱謂}、{名}、{佛號}、{經名} 自動代入；注音寫法：字ㄗˋ 或 字[Om]。':kind==='dedications'?'「建議迴向對象」以頓號分隔，念誦完畢時可一鍵加入。':'';
+  const tip=kind==='barriers'?'可用 {稱謂}、{名}、{佛號}、{經名} 自動代入；注音寫法：字ㄗˋ 或 字[Om]。':kind==='dedications'?'「建議迴向對象」以頓號分隔。內容中寫 {迴向對象}，念誦時若有指定對象，會自動換成對象的名字（未指定則為「法界一切眾生」）。':'';
   modal(`<h3>${id?'編輯':'新增'}範本</h3>
    <label class="f">名稱<input type="text" name="name" value="${h(t.name||'')}"></label>
    <label class="f">${kind==='barriers'?'提示說明':'建議迴向對象'}<input type="text" name="hint" value="${h(t.hint||'')}"></label>
    <label class="f">內容<textarea name="content" rows="9">${h(t.content||'')}</textarea></label>
+   ${kind!=='barriers'?`<label class="f">迴向時機<input type="text" name="when" value="${h(t.when||'')}" placeholder="例如：每次念誦完畢後"></label>`:''}
    ${tip?`<div class="hint">${tip}</div>`:''}
    <div class="sticky-act"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-act="tplSave" data-kind="${kind}" data-id="${id||''}">儲存</button></div>`);
 }
@@ -1041,7 +1067,8 @@ function renderReader(){
       <h3 style="margin:6px 0">迴向文</h3>
       <div>${S.dedications.map(x=>`<button class="chip ${d&&x.id===d.id?'on':''}" data-act="rdPick" data-k="dedId" data-v="${x.id}">${h(x.name)}</button>`).join('')}</div>
       <div class="paper"><div class="small muted">迴向對象：${h(names.concat(sugg).join('、')||'法界一切眾生')}</div>
-        <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(d?d.content:'')}</div></div>`;
+        ${d&&d.when?`<div class="small" style="color:var(--acc);margin-top:4px">迴向時機：${h(d.when)}</div>`:''}
+        <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(fill(d?d.content:'',Object.assign({},ctx,{tg:R.targetIds.map(i=>target(i)).filter(Boolean).map(t=>t.name).join('、')})))}</div></div>`;
     foot=`<div class="row"><button class="btn" data-act="rdBack">← 續念</button>
       ${next?`<button class="btn grow" data-act="rdNext" data-id="${next.s.id}">念下一部：${h(next.s.name)}</button>`:''}
       <button class="btn pri grow" data-act="rdFinish">🙏 圓滿結束</button></div>`;
@@ -1144,6 +1171,7 @@ const A={
   tplSave:d=>{
     const name=val('name'),content=val('content');if(!name||!content){toast('請填寫名稱與內容');return}
     const o={name,hint:val('hint'),content};
+    if(d.kind!=='barriers')o.when=val('when');
     if(d.id)Object.assign(S[d.kind].find(x=>x.id===d.id),o);else S[d.kind].push({id:uid(),...o});
     save();closeModal();render();
   },
