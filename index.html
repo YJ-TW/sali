@@ -74,6 +74,8 @@ nav.nav button.on{color:var(--acc);font-weight:700}
 .btn.dng{color:var(--warn);border-color:var(--soft-pink)}
 .btn.big{width:100%;min-height:56px;font-size:1.15rem;border-radius:16px}
 .faqq{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:8px 0;background:none;border:0;border-top:1px solid var(--line,rgba(128,128,128,.25));font:inherit;font-weight:600;color:inherit;text-align:left;cursor:pointer;min-height:44px}
+.seg.rdtabs{display:flex}
+.seg.rdtabs button{flex:1;padding-left:6px;padding-right:6px}
 .rdctl{display:flex;gap:10px;align-items:center}
 .rdctl>.grow{flex:1;min-width:0}
 .mkcol{flex:none;text-align:center}
@@ -1086,7 +1088,7 @@ function renderReader(){
     foot=`<div class="row"><button class="btn grow" data-act="rdSkip">略過</button><button class="btn pri grow" data-act="rdBegin">已完成結界，開始念誦 →</button></div>`;
   }else if(R.stage==='read'){
     const tabs=[['text','原文'],['trans','白話文'],['intro','介紹']];
-    body=`<div class="row" style="margin-bottom:12px;flex-wrap:nowrap"><div class="seg grow" style="margin:0">${tabs.map(t=>`<button class="${R.tab===t[0]?'on':''}" data-act="rdTab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div><button class="btn sm" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn sm" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button></div>
+    body=`<div class="row" style="margin-bottom:12px;flex-wrap:nowrap"><div class="seg grow rdtabs" style="margin:0">${tabs.map(t=>`<button class="${R.tab===t[0]?'on':''}" data-act="rdTab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div><button class="btn sm" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn sm" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button></div>
       ${R.tab==='text'&&s.parts?`<div class="seg vol">${s.parts.map((p,i)=>`<button class="${i===R.part?'on':''}" data-act="rdPart" data-v="${i}">${h(p.name)}</button>`).join('')}</div>`:''}
       ${R.tab==='text'?`<div class="rd-text paper sb ${zy?'':'nozy'} zy" style="--fs:${fs}">${fmt(sText(s,R.part))}</div>`
        :R.tab==='trans'?`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.translation?lines(s.translation):'<span class="muted">尚無白話文</span>'}</div>`
