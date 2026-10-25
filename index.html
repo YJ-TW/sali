@@ -76,8 +76,8 @@ nav.nav button.on{color:var(--acc);font-weight:700}
 .faq{border-top:1px solid var(--line,rgba(128,128,128,.25));padding:8px 0}
 .faq summary{cursor:pointer;font-weight:600}
 .faq p{margin:6px 0 2px;color:var(--muted);font-size:.92rem;line-height:1.6}
-.mokugyo{display:flex;align-items:center;justify-content:center;gap:12px;min-height:84px}
-.mokugyo svg{width:58px;height:58px;flex:none}
+.btn.big.mokugyo{display:flex;align-items:center;justify-content:center;width:104px;height:104px;min-height:0;padding:0;border-radius:50%;margin:0 auto}
+.mokugyo svg{width:70px;height:70px;flex:none}
 .mokugyo .mal{transform-origin:54px 8px;transform:rotate(16deg)}
 .mokugyo.hit .mal{animation:tok .24s ease-out}
 .mokugyo.hit .bd{animation:tokb .24s ease-out;transform-origin:32px 40px}
@@ -683,8 +683,9 @@ function pTg(){
   ${list.length?list.map(tgCard).join(''):`<div class="card empty">還沒有${TG==='pet'?'毛孩子':'家人'}，按右上角「新增」。</div>`}`;
 }
 function tgCard(t){
-  const logs=S.logs.filter(l=>(l.targetIds||[]).includes(t.id));
+  const logs=t.cat==='self'?S.logs:S.logs.filter(l=>(l.targetIds||[]).includes(t.id));
   const by={};logs.forEach(l=>{by[l.name]=(by[l.name]||0)+l.n});
+  const kinds=new Set(logs.map(l=>l.sutraId)).size;
   const total=logs.reduce((a,l)=>a+l.n,0);
   const passed=t.status==='passed';
   const sub=t.cat==='pet'?(t.species||'毛孩子'):t.cat==='self'?'':(t.title||'家人');
@@ -698,7 +699,7 @@ function tgCard(t){
           ${t.birthday?`${t.cat==='pet'?'生日／領養日':'生日'}：${h(t.birthday)}　`:''}${passed&&t.passed?`往生紀念日：${h(t.passed)}`:''}
         </div>
         ${t.note?`<div class="small" style="margin-top:4px">${lines(t.note)}</div>`:''}
-        <div style="margin-top:8px"><b style="color:var(--acc)">累積念誦 ${total} 遍</b> <span class="muted small">・${Object.keys(by).length} 種經咒</span></div>
+        <div style="margin-top:8px"><b style="color:var(--acc)">累積念誦 ${total} 遍</b> <span class="muted small">・${kinds} 種經咒</span></div>
         <div>${Object.entries(by).map(([k,v])=>`<span class="chip">${h(k)} ×${v}</span>`).join('')}</div>
       </div>
     </div>
@@ -1048,7 +1049,8 @@ function renderReader(){
     foot=`<div>
       <div class="small muted">迴向對象：${R.targetIds.length?'所選對象＋自己':'自己＋全部家人毛孩子（可點選指定）'}</div><div style="max-height:68px;overflow:auto"><button class="chip on" disabled style="opacity:.75">自己</button>${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>
       <div class="cnt"><b id="rdN">${R.count}</b> / <span id="rdG">${R.goal}</span> 遍 <span class="muted small">・今日累計 <span id="rdT">${doneToday(R.sutraId)}</span></span></div>
-      <button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg><span>念畢一遍 ＋1</span></button>
+      <button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg></button>
+      <div class="hint" style="text-align:center;margin:4px 0 8px">念畢一遍，敲一下木魚 ＋1</div>
       <div class="row" style="margin-top:8px"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">結束並迴向</button></div></div>`;
   }else if(R.stage==='ending'){
     const f=S.finals.find(x=>x.id===R.finalId)||S.finals[0];
@@ -1066,9 +1068,9 @@ function renderReader(){
     body=`<div class="hint">本次念誦 <b>${h(s.name)}</b> × ${R.count} 遍</div>
       <h3 style="margin:6px 0">迴向文</h3>
       <div>${S.dedications.map(x=>`<button class="chip ${d&&x.id===d.id?'on':''}" data-act="rdPick" data-k="dedId" data-v="${x.id}">${h(x.name)}</button>`).join('')}</div>
-      <div class="paper"><div class="small muted">迴向對象：${h(names.concat(sugg).join('、')||'法界一切眾生')}</div>
+      <div class="paper"><div class="small muted">迴向對象：${h((R.targetIds.length?names.concat(sugg):sugg).join('、')||'法界一切眾生')}</div>
         ${d&&d.when?`<div class="small" style="color:var(--acc);margin-top:4px">迴向時機：${h(d.when)}</div>`:''}
-        <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(fill(d?d.content:'',Object.assign({},ctx,{tg:R.targetIds.map(i=>target(i)).filter(Boolean).map(t=>t.name).join('、')})))}</div></div>`;
+        <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(fill(d?d.content:'',Object.assign({},ctx,{tg:(R.targetIds.length?R.targetIds.map(i=>target(i)).filter(Boolean).map(t=>t.name):sugg).join('、')})))}</div></div>`;
     foot=`<div class="row"><button class="btn" data-act="rdBack">← 續念</button>
       ${next?`<button class="btn grow" data-act="rdNext" data-id="${next.s.id}">念下一部：${h(next.s.name)}</button>`:''}
       <button class="btn pri grow" data-act="rdFinish">🙏 圓滿結束</button></div>`;
