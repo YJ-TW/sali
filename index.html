@@ -695,15 +695,25 @@ function pTg(){
   ${TG==='self'?'<div class="hint">未指定迴向對象時，功德會同時計入自己、全部家人與毛孩子（在世與已逝）；指定對象時，只計入所選對象與自己。</div>':''}
   ${list.length?list.map(tgCard).join(''):`<div class="card empty">還沒有${TG==='pet'?'毛孩子':'家人'}，按右上角「新增」。</div>`}`;
 }
+function tgLogs(t){return t.cat==='self'?S.logs:S.logs.filter(l=>(l.targetIds||[]).includes(t.id))}
+function tgView(id){
+  const t=target(id);if(!t)return;
+  const logs=tgLogs(t),by={};logs.forEach(l=>{by[l.name]=(by[l.name]||0)+l.n});
+  const total=logs.reduce((a,l)=>a+l.n,0),kinds=new Set(logs.map(l=>l.sutraId)).size;
+  modal(`<button class="btn mx" data-act="closeModal" aria-label="關閉">✕</button><h3>${h(t.name)} 的念誦</h3>
+   <div style="margin:6px 0"><b style="color:var(--acc)">累積念誦 ${total} 遍</b> <span class="muted small">・${kinds} 種經咒</span></div>
+   ${Object.keys(by).length?Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="ev"><div class="grow">${h(k)}</div><b>${v} 遍</b></div>`).join(''):'<div class="empty">還沒有念誦紀錄。</div>'}
+   <div class="sticky-act"><button class="btn sm" data-act="closeModal">關閉</button></div>`);
+}
 function tgCard(t){
-  const logs=t.cat==='self'?S.logs:S.logs.filter(l=>(l.targetIds||[]).includes(t.id));
+  const logs=tgLogs(t);
   const by={};logs.forEach(l=>{by[l.name]=(by[l.name]||0)+l.n});
   const kinds=new Set(logs.map(l=>l.sutraId)).size;
   const total=logs.reduce((a,l)=>a+l.n,0);
   const passed=t.status==='passed';
   const sub=t.cat==='pet'?(t.species||'毛孩子'):t.cat==='self'?'':(t.title||'家人');
   return `<div class="card">
-    <div class="tcard">
+    <div class="tcard" data-act="tgView" data-id="${t.id}" style="cursor:pointer">
       ${t.photo?`<img class="avatar" src="${t.photo}" alt="${h(t.name)}">`:`<div class="avatar">${t.cat==='pet'?'🐾':t.cat==='self'?'🙂':'🏠'}</div>`}
       <div class="grow">
         <h2 style="margin:0 0 2px"><span>${h(t.name)} <span class="muted small" style="font-weight:400">${h(sub)}</span></span>
@@ -712,8 +722,7 @@ function tgCard(t){
           ${t.birthday?`${t.cat==='pet'?'生日／領養日':'生日'}：${h(t.birthday)}　`:''}${passed&&t.passed?`往生紀念日：${h(t.passed)}`:''}
         </div>
         ${t.note?`<div class="small" style="margin-top:4px">${lines(t.note)}</div>`:''}
-        <div style="margin-top:8px"><b style="color:var(--acc)">累積念誦 ${total} 遍</b> <span class="muted small">・${kinds} 種經咒</span></div>
-        <div>${Object.entries(by).map(([k,v])=>`<span class="chip">${h(k)} ×${v}</span>`).join('')}</div>
+        <div style="margin-top:8px"><b style="color:var(--acc)">累積念誦 ${total} 遍</b> <span class="muted small">・${kinds} 種經咒</span> <span class="muted small">・點一下查看經文</span></div>
       </div>
     </div>
     <div class="row" style="margin-top:12px">
@@ -1177,6 +1186,7 @@ const A={
   sutraDel:d=>{if(confirm('刪除這部經文？（念誦紀錄會保留）')){S.sutras=S.sutras.filter(s=>s.id!==d.id);S.plan=S.plan.filter(p=>p.sutraId!==d.id);save();closeModal();render()}},
   effTog:(d,b)=>{const inp=$('#modal [name=effects]');let a=inp.value.split(/[,，、]/).map(x=>x.trim()).filter(Boolean);a=a.includes(d.v)?a.filter(x=>x!==d.v):[...a,d.v];inp.value=a.join('，')},
   /* 對象 */
+  tgView:d=>tgView(d.id),
   tgTab:d=>{TG=d.v;render()},
   tgForm:d=>tgForm(d.id),
   tgSave:d=>{
