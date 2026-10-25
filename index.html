@@ -1083,16 +1083,16 @@ function renderReader(){
     foot=`<div class="row"><button class="btn grow" data-act="rdSkip">略過</button><button class="btn pri grow" data-act="rdBegin">已完成結界，開始念誦 →</button></div>`;
   }else if(R.stage==='read'){
     const tabs=[['text','原文'],['trans','白話文'],['intro','介紹']];
-    body=`<div class="seg" style="margin-bottom:12px">${tabs.map(t=>`<button class="${R.tab===t[0]?'on':''}" data-act="rdTab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div>
+    body=`<div class="row" style="margin-bottom:12px;flex-wrap:nowrap"><div class="seg grow" style="margin:0">${tabs.map(t=>`<button class="${R.tab===t[0]?'on':''}" data-act="rdTab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div><button class="btn sm" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn sm" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button></div>
       ${R.tab==='text'&&s.parts?`<div class="seg vol">${s.parts.map((p,i)=>`<button class="${i===R.part?'on':''}" data-act="rdPart" data-v="${i}">${h(p.name)}</button>`).join('')}</div>`:''}
       ${R.tab==='text'?`<div class="rd-text paper sb ${zy?'':'nozy'} zy" style="--fs:${fs}">${fmt(sText(s,R.part))}</div>`
        :R.tab==='trans'?`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.translation?lines(s.translation):'<span class="muted">尚無白話文</span>'}</div>`
        :`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.intro?lines(s.intro):'<span class="muted">尚無介紹</span>'}${s.effects&&s.effects.length?`<div style="margin-top:8px">${s.effects.map(e=>`<span class="tag">${h(e)}</span>`).join('')}</div>`:''}</div>`}`;
     foot=`<div class="rdctl"><div class="grow">
       <div class="cnt"><b id="rdN">${R.count}</b> / <span id="rdG">${R.goal}</span> 遍 <span class="muted small">・今日累計 <span id="rdT">${doneToday(R.sutraId)}</span></span></div>
-      <div class="row"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">完成並迴向</button></div></div>
+      <div class="row"><button class="btn grow" data-act="rdDedic">迴向</button><button class="btn pri grow" data-act="rdDone">完成並迴向</button></div></div>
       <div class="mkcol"><button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg></button>
-      <button class="btn sm" style="margin-top:6px" data-act="rdDedic">迴向</button></div></div>`;
+</div></div>`;
   }else if(R.stage==='ending'){
     const f=S.finals.find(x=>x.id===R.finalId)||S.finals[0];
     body=`<h3 style="margin-bottom:8px">圓滿結束</h3>
