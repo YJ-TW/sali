@@ -121,7 +121,10 @@ rt{font-size:.5em;color:var(--muted);font-weight:400;letter-spacing:0}
 .nozy rt,.nozy .zs{display:none}
 .zc{white-space:nowrap}
 .zs{display:inline-flex;align-items:center;margin:0 .14em 0 .03em;vertical-align:middle;color:var(--muted)}
-.zb{writing-mode:vertical-rl;text-orientation:upright;font-size:.34em;line-height:.98;font-weight:400;letter-spacing:0}
+.zb{display:inline-flex;flex-direction:column;justify-content:space-between;align-items:center;height:1em;font-weight:400;letter-spacing:0;line-height:1}
+.zb.n1{justify-content:center}
+.zb i{font-style:normal;font-size:.34em;line-height:1}
+.zb.n2 i{font-size:.4em}.zb.n1 i{font-size:.46em}
 .zt{font-size:.34em;line-height:1;font-weight:400;margin-left:.02em}
 [data-zypos=right] .zy{--lh:1.9}
 .sb{--lh:1.7}
@@ -196,7 +199,8 @@ function zr(c,z){
   const m=BPM.exec(z);
   if(!m||S.settings.zyPos==='top')return `<ruby>${c}<rt>${z}</rt></ruby>`;
   const neutral=m[1]||(m[3]==='˙'?'˙':''),tone=m[3]&&m[3]!=='˙'?m[3]:'';
-  return `<span class="zc">${c}<span class="zs"><span class="zb">${neutral&&m[1]?m[1]:''}${m[2]}${neutral&&!m[1]?m[3]:''}</span>${tone?`<span class="zt">${tone}</span>`:''}</span></span>`;
+  const sy=[...(neutral&&m[1]?m[1]:''),...m[2],...(neutral&&!m[1]?m[3]:'')];
+  return `<span class="zc">${c}<span class="zs"><span class="zb n${Math.min(sy.length,3)}">${sy.map(x=>`<i>${x}</i>`).join('')}</span>${tone?`<span class="zt">${tone}</span>`:''}</span></span>`;
 }
 function fmt(t){
   let s=h(t);
@@ -783,8 +787,8 @@ const FAQ=[
  ['資料存在哪裡？換手機會不見嗎？','所有資料只存在這個瀏覽器（這台裝置）。換手機或清除瀏覽器資料前，請先到下方「備份與還原」匯出備份，或開啟「跨裝置同步」。'],
  ['怎麼把 App 裝到手機桌面？','用手機瀏覽器打開網站：iPhone 請用 Safari，按「分享」→「加入主畫面」；Android 請用 Chrome，按選單→「安裝應用程式」。'],
  ['念誦的流程是什麼？','結界文 → 念誦（每念完一遍按一次木魚）→ 迴向文 → 圓滿結束與結尾文。連續念下一部且間隔不久時，不會重複顯示結界文。'],
- ['「結束並迴向」會怎麼計算？','代表完成這部經今天的次數：若這部經在「今日功課」裡，系統會把今天還差的遍數一次補滿，再進入迴向文。'],
- ['迴向對象怎麼計算？','沒有指定對象時，每一遍會同時計入自己、全部家人與毛孩子（在世與已逝皆含）；指定對象時，只計入所選對象與自己。這個規則從更新後開始，舊紀錄不會回頭補。'],
+ ['「完成並迴向」和「迴向」有什麼不同？','「完成並迴向」代表完成這部經今天的次數：若這部經在「今日功課」裡，系統會把今天還差的遍數一次補滿，再進入迴向文。右下角的「迴向」則只記錄目前已敲木魚的遍數，直接進入迴向文。'],
+ ['迴向對象怎麼計算？','沒有指定對象時，每一遍會同時計入自己、全部家人與毛孩子（在世與已逝皆含）；指定對象時，只計入所選對象與自己。對象在念誦完畢、進入迴向文頁面時點選。這個規則從更新後開始，舊紀錄不會回頭補。'],
  ['迴向文裡的 {迴向對象} 是什麼？','在迴向文內容寫上 {迴向對象}，念誦時若有指定對象，會自動換成他們的名字（多位以頓號分隔）；只有點選了特定對象才會代入；沒指定時顯示「法界一切眾生」。{稱謂}、{名}、{佛號}、{經名} 也可使用。'],
  ['迴向時機是什麼？','每篇迴向文可填寫適合使用的時機（例如：每次念誦完畢、為親友祈福時），會顯示在迴向文頁面，方便挑選。可在迴向文範本的編輯畫面修改。'],
  ['注音顯示不對或想調整怎麼辦？','設定頁可切換注音位置（字的右側或上方），念誦畫面可開關注音、用 A−／A＋ 調整字體大小。經文內容可在經文庫點開後按「編輯」修改。'],
@@ -1069,11 +1073,10 @@ function renderReader(){
        :R.tab==='trans'?`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.translation?lines(s.translation):'<span class="muted">尚無白話文</span>'}</div>`
        :`<div class="paper sb" style="font-size:calc(1.05rem*${fs})">${s.intro?lines(s.intro):'<span class="muted">尚無介紹</span>'}${s.effects&&s.effects.length?`<div style="margin-top:8px">${s.effects.map(e=>`<span class="tag">${h(e)}</span>`).join('')}</div>`:''}</div>`}`;
     foot=`<div class="rdctl"><div class="grow">
-      <div class="small muted">迴向對象：${R.targetIds.length?'所選對象＋自己':'全部（可點選指定）'}</div><div style="max-height:68px;overflow:auto"><button class="chip on" disabled style="opacity:.75">自己</button>${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>
       <div class="cnt"><b id="rdN">${R.count}</b> / <span id="rdG">${R.goal}</span> 遍 <span class="muted small">・今日累計 <span id="rdT">${doneToday(R.sutraId)}</span></span></div>
-      <div class="row"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">結束並迴向</button></div></div>
+      <div class="row"><button class="btn" data-act="rdFs" data-v="-0.1" aria-label="縮小字體">A−</button><button class="btn" data-act="rdFs" data-v="0.1" aria-label="放大字體">A＋</button><button class="btn grow" data-act="rdDone">完成並迴向</button></div></div>
       <div class="mkcol"><button class="btn pri big mokugyo" id="rdMok" data-act="rdTap" aria-label="念畢一遍 ＋1"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="bd"><ellipse cx="30" cy="42" rx="23" ry="16"/><path d="M12 42h22c3 0 3-5 0-5H16"/><path d="M53 40l5 4"/></g><g class="mal"><path d="M54 8L40 26"/><circle cx="38" cy="29" r="4" fill="currentColor"/></g></svg></button>
-      <div class="hint" style="margin-top:2px">念畢 ＋1</div></div></div>`;
+      <button class="btn sm" style="margin-top:6px" data-act="rdDedic">迴向</button></div></div>`;
   }else if(R.stage==='ending'){
     const f=S.finals.find(x=>x.id===R.finalId)||S.finals[0];
     body=`<h3 style="margin-bottom:8px">圓滿結束</h3>
@@ -1090,6 +1093,8 @@ function renderReader(){
     body=`<div class="hint">本次念誦 <b>${h(s.name)}</b> × ${R.count} 遍</div>
       <h3 style="margin:6px 0">迴向文</h3>
       <div>${S.dedications.map(x=>`<button class="chip ${d&&x.id===d.id?'on':''}" data-act="rdPick" data-k="dedId" data-v="${x.id}">${h(x.name)}</button>`).join('')}</div>
+      <div class="small muted" style="margin-top:8px">指定迴向對象（不選＝自己＋全部家人毛孩子）：</div>
+      <div><button class="chip on" disabled style="opacity:.75">自己</button>${S.targets.map(t=>`<button class="chip ${R.targetIds.includes(t.id)?'on':''}" data-act="rdTog" data-id="${t.id}">${h(t.name)}</button>`).join('')}</div>
       <div class="paper"><div class="small muted">迴向對象：${h((R.targetIds.length?names.concat(sugg):sugg).join('、')||'法界一切眾生')}</div>
         ${d&&d.when?`<div class="small" style="color:var(--acc);margin-top:4px">迴向時機：${h(d.when)}</div>`:''}
         <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(fill(d?d.content:'',Object.assign({},ctx,{tg:R.targetIds.map(i=>target(i)).filter(Boolean).map(t=>t.name).join('、')})))}</div></div>`;
@@ -1249,6 +1254,9 @@ const A={
   rdSkip:()=>{R.stage='read';renderReader()},
   rdTog:d=>{const i=R.targetIds.indexOf(d.id);i>=0?R.targetIds.splice(i,1):R.targetIds.push(d.id);renderReader()},
   rdTap,rdUndo,
+  rdDedic:()=>{
+    if(!R.count){toast('請先敲木魚記錄遍數，或按「完成並迴向」');return}
+    R.stage='dedicate';renderReader()},
   rdDone:()=>{
     const s=sutra(R.sutraId),p=s&&S.plan.find(x=>x.sutraId===s.id),rem=p?p.times-doneToday(s.id):0;
     if(rem>0){const l={id:uid(),date:today(),ts:Date.now(),sutraId:s.id,name:s.name,n:rem,targetIds:effT(R.targetIds)};
