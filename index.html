@@ -789,7 +789,7 @@ const FAQ=[
  ['念誦的流程是什麼？','結界文 → 念誦（每念完一遍按一次木魚）→ 迴向文 → 圓滿結束與結尾文。連續念下一部且間隔不久時，不會重複顯示結界文。'],
  ['「結束並迴向」會怎麼計算？','代表完成這部經今天的次數：若這部經在「今日功課」裡，系統會把今天還差的遍數一次補滿，再進入迴向文。'],
  ['迴向對象怎麼計算？','沒有指定對象時，每一遍會同時計入自己、全部家人與毛孩子（在世與已逝皆含）；指定對象時，只計入所選對象與自己。這個規則從更新後開始，舊紀錄不會回頭補。'],
- ['迴向文裡的 {迴向對象} 是什麼？','在迴向文內容寫上 {迴向對象}，念誦時若有指定對象，會自動換成他們的名字（多位以頓號分隔）；沒指定則換成該迴向文的「建議迴向對象」（都沒填則為「法界一切眾生」）。{稱謂}、{名}、{佛號}、{經名} 也可使用。'],
+ ['迴向文裡的 {迴向對象} 是什麼？','在迴向文內容寫上 {迴向對象}，念誦時若有指定對象，會自動換成他們的名字（多位以頓號分隔）；只有點選了特定對象才會代入；沒指定時顯示「法界一切眾生」。{稱謂}、{名}、{佛號}、{經名} 也可使用。'],
  ['迴向時機是什麼？','每篇迴向文可填寫適合使用的時機（例如：每次念誦完畢、為親友祈福時），會顯示在迴向文頁面，方便挑選。可在迴向文範本的編輯畫面修改。'],
  ['注音顯示不對或想調整怎麼辦？','設定頁可切換注音位置（字的右側或上方），念誦畫面可開關注音、用 A−／A＋ 調整字體大小。經文內容可在經文庫點開後按「編輯」修改。'],
  ['行事曆的農曆日期準嗎？可以改嗎？','農曆由瀏覽器內建曆法換算，個別年份可能與寺院日曆差一天。節日與行程都可點開編輯、隱藏，也可自行新增。'],
@@ -1088,7 +1088,7 @@ function renderReader(){
       <div>${S.dedications.map(x=>`<button class="chip ${d&&x.id===d.id?'on':''}" data-act="rdPick" data-k="dedId" data-v="${x.id}">${h(x.name)}</button>`).join('')}</div>
       <div class="paper"><div class="small muted">迴向對象：${h((R.targetIds.length?names.concat(sugg):sugg).join('、')||'法界一切眾生')}</div>
         ${d&&d.when?`<div class="small" style="color:var(--acc);margin-top:4px">迴向時機：${h(d.when)}</div>`:''}
-        <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(fill(d?d.content:'',Object.assign({},ctx,{tg:(R.targetIds.length?R.targetIds.map(i=>target(i)).filter(Boolean).map(t=>t.name):sugg).join('、')})))}</div></div>`;
+        <div class="rd-text center" style="margin-top:8px;--fs:.9">${lines(fill(d?d.content:'',Object.assign({},ctx,{tg:R.targetIds.map(i=>target(i)).filter(Boolean).map(t=>t.name).join('、')})))}</div></div>`;
     foot=`<div class="row"><button class="btn" data-act="rdBack">← 續念</button>
       ${next?`<button class="btn grow" data-act="rdNext" data-id="${next.s.id}">念下一部：${h(next.s.name)}</button>`:''}
       <button class="btn pri grow" data-act="rdFinish">🙏 圓滿結束</button></div>`;
