@@ -618,7 +618,7 @@ function pHome(){
     </div>
   </div>
   <div class="card">
-    <h2><span>今日功課</span><span class="row"><button class="btn sm" data-act="planAdd">＋ 加入經文</button></span></h2>
+    <h2><span>今日功課${(()=>{const t=items.reduce((a,{p,s})=>a+(s.durationSec||0)*p.times,0);if(!t)return'';const m=Math.round(t/60);return` <span class="muted small" style="font-weight:400">・全部約 ${m>=60?`${Math.floor(m/60)} 小時${m%60?` ${m%60} 分`:''}`:`${Math.max(1,m)} 分鐘`}</span>`})()}</span><span class="row"><button class="btn sm" data-act="planAdd">＋ 加入經文</button></span></h2>
     ${items.length?items.map(({p,s},i)=>{
       const dn=doneToday(s.id),pc=Math.min(100,Math.round(dn/p.times*100));
       return `<div class="plan">
