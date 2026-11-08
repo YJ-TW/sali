@@ -189,7 +189,9 @@ const h=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
 const pad=n=>String(n).padStart(2,'0');
 const ds=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const today=()=>ds(new Date());
+const RESET_H=2; /* 每天凌晨兩點才換日、重設今日進度 */
+const dayNow=()=>new Date(Date.now()-RESET_H*36e5);
+const today=()=>ds(dayNow());
 const parseD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12)};
 const WK='日一二三四五六';
 const fmtDur=sec=>{sec=Math.round(sec||0);if(sec<60)return sec+' 秒';const m=Math.floor(sec/60),s=sec%60;return s?`${m} 分 ${s} 秒`:`${m} 分鐘`};
@@ -557,7 +559,7 @@ const doneToday=id=>S.logs.filter(l=>l.date===today()&&l.sutraId===id).reduce((a
 const planItems=()=>S.plan.map(p=>({p,s:sutra(p.sutraId)})).filter(x=>x.s);
 const allPlanDone=()=>{const it=planItems();return it.length>0&&it.every(x=>doneToday(x.s.id)>=x.p.times)};
 function streak(){
-  const set=new Set(S.checkins);let n=0;const d=new Date();d.setHours(12);
+  const set=new Set(S.checkins);let n=0;const d=dayNow();d.setHours(12);
   if(!set.has(ds(d)))d.setDate(d.getDate()-1);
   while(set.has(ds(d))){n++;d.setDate(d.getDate()-1)}
   return n;
@@ -583,7 +585,8 @@ const ICON={
 const NAV=[['home','總覽'],['lib','經文庫'],['tg','祈福對象'],['cal','行事曆'],['set','設定']];
 function render(){
   document.documentElement.dataset.theme=S.settings.theme;document.documentElement.dataset.zypos=S.settings.zyPos;
-  $('#hdrDate').textContent=`${new Date().getFullYear()}/${new Date().getMonth()+1}/${new Date().getDate()}（週${WK[new Date().getDay()]}）${lunarText(new Date(new Date().setHours(12)))}`;
+  const dn=dayNow();
+  $('#hdrDate').textContent=`${dn.getFullYear()}/${dn.getMonth()+1}/${dn.getDate()}（週${WK[dn.getDay()]}）${lunarText(new Date(new Date(dn).setHours(12)))}`;
   $('#nav').innerHTML=NAV.map(n=>`<button class="${page===n[0]?'on':''}" data-act="nav" data-v="${n[0]}"><span>${ICON[n[0]]}</span>${n[1]}</button>`).join('');
   $('#app').innerHTML=({home:pHome,lib:pLib,tg:pTg,cal:pCal,set:pSet})[page]();
   if(page==='lib')renderLib();
@@ -595,10 +598,10 @@ function pHome(){
   const total=S.logs.reduce((a,l)=>a+l.n,0),kinds=new Set(S.logs.map(l=>l.sutraId)).size;
   const tn=S.logs.filter(l=>l.date===t).reduce((a,l)=>a+l.n,0);
   const done=allPlanDone();
-  const ups=[];const now=new Date();
+  const ups=[];const now=dayNow();
   for(let i=0;i<=30;i++){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12);eventsOn(d).filter(e=>e.t!=='monthly'&&(e.day===1||i===0)).forEach(e=>ups.push({d,e}))}
   const needBackup=S.logs.length>0&&Date.now()-S.settings.lastExport>14*864e5;
-  const fests=eventsOn(new Date(new Date().setHours(12))).filter(e=>e.t==='fest'||e.t==='custom');
+  const fests=eventsOn(new Date(dayNow().setHours(12))).filter(e=>e.t==='fest'||e.t==='custom');
   const festBox=fests.length?`<div class="card" style="padding:10px 14px">${fests.map(e=>`<div style="padding:3px 0"><b style="color:var(--acc)">🪷 ${h(e.title)}</b>${e.type?` <span class="tag">${h(e.type)}</span>`:''}${e.span>1?` <span class="muted small">（第 ${e.day} 天／共 ${e.span} 天）</span>`:''}${e.practice||e.brief?`<div class="small muted" style="margin-top:2px">${lines(e.practice||e.brief)}</div>`:''}</div>`).join('')}</div>`:'';
   return `
   ${festBox}
@@ -1060,7 +1063,7 @@ function tplForm(kind,id){
 let R=null,wake=null;
 function needBarrier(){
   const la=S.lastActivity;
-  return !la||ds(new Date(la))!==today()||Date.now()-la>S.settings.gap*60000;
+  return !la||ds(new Date(la-RESET_H*36e5))!==today()||Date.now()-la>S.settings.gap*60000;
 }
 function newR(o){return Object.assign({sutraId:null,stage:'read',barrierId:(S.barriers[0]||{}).id,dedId:(S.dedications[0]||{}).id,finalId:(S.finals[0]||{}).id,
   targetIds:[],extra:[],goal:1,count:0,sessionLogs:[],tab:'text',part:0,finalOnly:false},o)}
